@@ -1,0 +1,12 @@
+{
+  "deviceId": 0,
+  "mqttTopic": "aranetproxy",
+  "mqttUsername": "aranetproxy",
+  "mqttPassword": "aranetproxy",
+  "mqttHost": "127.0.0.1",
+  "mqttServerPort": 1883,
+  "mqttUseTls": false,
+  "mqttInsecure": false,
+  "ssd1306Rows": 64,
+  "scanInterval": 300
+}

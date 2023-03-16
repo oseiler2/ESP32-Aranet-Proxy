@@ -1,0 +1,11 @@
+# Give admin full access to everything
+user admin
+topic readwrite #
+
+user aranetproxy
+topic write aranetproxy/+/up/#
+topic read aranetproxy/+/down/#
+topic read aranetproxy/down/#
+
+user nodered
+topic readwrite aranetproxy/#

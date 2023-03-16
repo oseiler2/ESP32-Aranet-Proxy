@@ -1,0 +1,761 @@
+[
+    {
+        "id": "c37fa3218a0ef34e",
+        "type": "tab",
+        "label": "CO2 Monitors",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "b7cf11b5ea504e64",
+        "type": "group",
+        "z": "c37fa3218a0ef34e",
+        "name": "Error handler",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "6ee5961baf4f943c",
+            "5bc4965a95c5bc1e",
+            "e47737108b35848c",
+            "867126965f0a926f"
+        ],
+        "x": 14,
+        "y": 619,
+        "w": 502,
+        "h": 122
+    },
+    {
+        "id": "1ce9a09eb506506e",
+        "type": "group",
+        "z": "c37fa3218a0ef34e",
+        "name": "Send email alerts",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "8e5e3fd5795f8f28",
+            "eda4a33d24a0bcf7",
+            "def83f723a4db395"
+        ],
+        "x": 14,
+        "y": 499,
+        "w": 512,
+        "h": 82
+    },
+    {
+        "id": "7f411bdffd15e79b",
+        "type": "group",
+        "z": "c37fa3218a0ef34e",
+        "name": "Check monitors are online",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "b22ee1f14349dc0c",
+            "a0a424038e28e609",
+            "873e7b615075c51b",
+            "736ed3b5bc9e8f8f",
+            "cd3ce6a14284936f",
+            "561e767abbb98746",
+            "902c14fa02b599e1",
+            "5559a4c34f50c615",
+            "d7fd9540551cce6a",
+            "34d3082db1285a83"
+        ],
+        "x": 14,
+        "y": 339,
+        "w": 1262,
+        "h": 122
+    },
+    {
+        "id": "e73d1874985f71cd",
+        "type": "group",
+        "z": "c37fa3218a0ef34e",
+        "name": "Get configuration",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "2c20dcb594ab35b5",
+            "2fd41b97d426b7ef",
+            "2eaeb4b149409f42"
+        ],
+        "x": 14,
+        "y": 219,
+        "w": 792,
+        "h": 82
+    },
+    {
+        "id": "58efdd9623a754b7",
+        "type": "group",
+        "z": "c37fa3218a0ef34e",
+        "name": "Persist data",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "71363e6ad6666bd5",
+            "7452bccf82fe3096",
+            "f3b1b17482a401d7",
+            "e9cde4e1d26343db",
+            "e10dcc6e978f430d",
+            "fc93601c742de98a",
+            "8b3b7b811cbfd1cb",
+            "537b2951282a292f",
+            "54a4be8b180871c4",
+            "eb1fa983ee9cfce0"
+        ],
+        "x": 14,
+        "y": 19,
+        "w": 1072,
+        "h": 162
+    },
+    {
+        "id": "1311c12af3ff7368",
+        "type": "mqtt-broker",
+        "name": "Mosquitto Docker",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "node-red",
+        "autoConnect": true,
+        "usetls": false,
+        "compatmode": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "95ab1165cf9cde4f",
+        "type": "influxdb",
+        "hostname": "influxdb",
+        "port": "8086",
+        "protocol": "http",
+        "database": "co2monitors",
+        "name": "influxdb",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "http://influxdb:8086/",
+        "rejectUnauthorized": false
+    },
+    {
+        "id": "71363e6ad6666bd5",
+        "type": "mqtt in",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "topic": "aranetproxy/+/up/#",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "1311c12af3ff7368",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 130,
+        "y": 80,
+        "wires": [
+            [
+                "f3b1b17482a401d7"
+            ]
+        ]
+    },
+    {
+        "id": "7452bccf82fe3096",
+        "type": "debug",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 490,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "f3b1b17482a401d7",
+        "type": "json",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 330,
+        "y": 80,
+        "wires": [
+            [
+                "7452bccf82fe3096",
+                "fc93601c742de98a"
+            ]
+        ]
+    },
+    {
+        "id": "e9cde4e1d26343db",
+        "type": "influxdb out",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "influxdb": "95ab1165cf9cde4f",
+        "name": "",
+        "measurement": "configuration",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "",
+        "retentionPolicyV18Flux": "",
+        "org": "CO2Monitors",
+        "bucket": "co2monitors",
+        "x": 940,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "e10dcc6e978f430d",
+        "type": "influxdb out",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "influxdb": "95ab1165cf9cde4f",
+        "name": "",
+        "measurement": "sensors",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "",
+        "retentionPolicyV18Flux": "",
+        "org": "CO2Monitors",
+        "bucket": "co2monitors",
+        "x": 920,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "fc93601c742de98a",
+        "type": "switch",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "property": "topic",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "regex",
+                "v": "aranetproxy\\/\\d+\\/up\\/config",
+                "vt": "str",
+                "case": false
+            },
+            {
+                "t": "regex",
+                "v": "aranetproxy\\/\\d+\\/up\\/sensors\\/[^\\/]+",
+                "vt": "str",
+                "case": false
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 3,
+        "x": 490,
+        "y": 80,
+        "wires": [
+            [
+                "54a4be8b180871c4"
+            ],
+            [
+                "537b2951282a292f"
+            ],
+            [
+                "8b3b7b811cbfd1cb"
+            ]
+        ]
+    },
+    {
+        "id": "6ee5961baf4f943c",
+        "type": "catch",
+        "z": "c37fa3218a0ef34e",
+        "g": "b7cf11b5ea504e64",
+        "name": "",
+        "scope": null,
+        "uncaught": false,
+        "x": 100,
+        "y": 700,
+        "wires": [
+            [
+                "e47737108b35848c",
+                "5bc4965a95c5bc1e"
+            ]
+        ]
+    },
+    {
+        "id": "5bc4965a95c5bc1e",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "b7cf11b5ea504e64",
+        "name": "Set email content",
+        "func": "msg.topic = \"Aranet Proxy error!\";\n\nmsg.payload =\n    \"error: \" + msg.error.message + \"\\n\" +\n    \"source id: \" + msg.error.source.id + \"\\n\" +\n    \"source name: \" + msg.error.source.name + \"\\n\" +\n    JSON.stringify(msg);\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 700,
+        "wires": [
+            [
+                "867126965f0a926f"
+            ]
+        ]
+    },
+    {
+        "id": "e47737108b35848c",
+        "type": "debug",
+        "z": "c37fa3218a0ef34e",
+        "g": "b7cf11b5ea504e64",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 290,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "8b3b7b811cbfd1cb",
+        "type": "debug",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 670,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "537b2951282a292f",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "func": "var payload = msg.payload;\nif (payload && payload.temperature) {\n  payload.temperature = parseFloat(payload.temperature);\n  if (isNaN(payload.temperature)) delete payload[\"temperature\"];\n}\nif (payload && payload.co2 == 0) {\n  delete payload[\"co2\"];\n}\n\nvar ids = msg.topic.match(/aranetproxy\\/(\\d+)\\/up\\/sensors\\/([^\\/]+)/);\n\nvar tags = {\n    \"aranet_id\": ids[2],\n    \"dev_id\" : ids[1]\n};\n\nmsg.payload = [payload, tags];\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 100,
+        "wires": [
+            [
+                "e10dcc6e978f430d",
+                "eb1fa983ee9cfce0"
+            ]
+        ]
+    },
+    {
+        "id": "54a4be8b180871c4",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "func": "var payload = msg.payload;\nif (payload && payload.name) {\n  delete payload[\"name\"];\n}\n\nif (payload && payload.tempOffset) {\n  payload.tempOffset = parseFloat(payload.tempOffset);\n  if (isNaN(payload.tempOffset)) delete payload[\"tempOffset\"];\n}\n\nif (payload && payload.appVersion && Number.isInteger(payload.appVersion)) {\n  payload.appVersion = payload.appVersion.toString();\n}\n\nvar tags = {\"dev_id\": msg.topic.match(/aranetproxy\\/(\\d+)\\/up\\/config/)[1]};\n\nmsg.payload = [payload, tags];\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 60,
+        "wires": [
+            [
+                "e9cde4e1d26343db",
+                "eb1fa983ee9cfce0"
+            ]
+        ]
+    },
+    {
+        "id": "eb1fa983ee9cfce0",
+        "type": "debug",
+        "z": "c37fa3218a0ef34e",
+        "g": "58efdd9623a754b7",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 870,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "b22ee1f14349dc0c",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "Query",
+        "func": "var monitor = msg.payload.value;\n\nvar query = 'from(bucket: \"co2monitors\")  \\\n   |> range(start: -1y)             \\\n   |> filter(fn: (r) =>             \\\n    r._measurement == \"sensors\" and   \\\n    r._field == \"co2\" and          \\\n    r.dev_id == \"' + monitor + '\")          \\\n  |> last()                         \\\n  |> map(fn:  (r) => ({ time:r._time }))';\n\nmsg.query = query;\nmsg.monitor = monitor;\n\nmsg.topic = \"aranetproxy/\" + monitor + \"/status\"\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 400,
+        "wires": [
+            [
+                "d7fd9540551cce6a"
+            ]
+        ]
+    },
+    {
+        "id": "a0a424038e28e609",
+        "type": "debug",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1110,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "873e7b615075c51b",
+        "type": "inject",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "Refresh monitors",
+        "props": [],
+        "repeat": "1800",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 150,
+        "y": 400,
+        "wires": [
+            [
+                "5559a4c34f50c615"
+            ]
+        ]
+    },
+    {
+        "id": "736ed3b5bc9e8f8f",
+        "type": "split",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "Split",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "dev_id",
+        "x": 470,
+        "y": 400,
+        "wires": [
+            [
+                "b22ee1f14349dc0c"
+            ]
+        ]
+    },
+    {
+        "id": "cd3ce6a14284936f",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "Check",
+        "func": "var status = 'offline';\n\nif (msg.payload[0]) {\n    var last = (new Date(msg.payload[0].time)).getTime() / 1000;\n    var now = new Date();\n    var current = (now.getTime() + (now.getTimezoneOffset() * 60)) / 1000;        \n    var difference = current - last;\n    msg.last = last;\n    msg.current = current;\n    msg.delta = difference;\n//    node.warn(difference);\n    if (difference < 60 * 10 * 1) status = 'online';\n}\n\nmsg.status = status;\nmsg.topic = msg.topic + \"/\" + status;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 400,
+        "wires": [
+            [
+                "561e767abbb98746"
+            ]
+        ]
+    },
+    {
+        "id": "561e767abbb98746",
+        "type": "rbe",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "RBE",
+        "func": "rbei",
+        "gap": "",
+        "start": "",
+        "inout": "out",
+        "septopics": true,
+        "property": "status",
+        "topi": "monitor",
+        "x": 970,
+        "y": 400,
+        "wires": [
+            [
+                "a0a424038e28e609",
+                "902c14fa02b599e1"
+            ]
+        ]
+    },
+    {
+        "id": "902c14fa02b599e1",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "Email",
+        "func": "var monitor = msg.monitor;\nmsg.payload = \"Aranetproxy: \" + monitor + \" \" + msg.status + \".\";\nmsg.topic = \"Aranetproxy: \" + monitor + \" \" + msg.status + \".\";\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1110,
+        "y": 420,
+        "wires": [
+            [
+                "34d3082db1285a83"
+            ]
+        ]
+    },
+    {
+        "id": "5559a4c34f50c615",
+        "type": "influxdb in",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "influxdb": "95ab1165cf9cde4f",
+        "name": "Get monitors",
+        "query": "import \"influxdata/influxdb/v1\"\nv1.tagValues(\n    bucket: \"co2monitors\",\n    tag: \"dev_id\",\n    predicate: (r) => true\n)\n|> map(fn:  (r) => ({key:\"dev_id\", value:r._value}))",
+        "rawOutput": false,
+        "precision": "",
+        "retentionPolicy": "",
+        "org": "CO2Monitors",
+        "x": 330,
+        "y": 400,
+        "wires": [
+            [
+                "736ed3b5bc9e8f8f"
+            ]
+        ]
+    },
+    {
+        "id": "d7fd9540551cce6a",
+        "type": "influxdb in",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "influxdb": "95ab1165cf9cde4f",
+        "name": "Latest",
+        "query": "",
+        "rawOutput": false,
+        "precision": "",
+        "retentionPolicy": "",
+        "org": "CO2Monitors",
+        "x": 710,
+        "y": 400,
+        "wires": [
+            [
+                "cd3ce6a14284936f"
+            ]
+        ]
+    },
+    {
+        "id": "2c20dcb594ab35b5",
+        "type": "mqtt out",
+        "z": "c37fa3218a0ef34e",
+        "g": "e73d1874985f71cd",
+        "name": "CO2 Monitors",
+        "topic": "",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "1311c12af3ff7368",
+        "x": 700,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "2fd41b97d426b7ef",
+        "type": "function",
+        "z": "c37fa3218a0ef34e",
+        "g": "e73d1874985f71cd",
+        "name": "Get Config (all)",
+        "func": "msg.topic = 'aranetproxy/down/getConfig'\n\nmsg.payload = {};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 260,
+        "wires": [
+            [
+                "2c20dcb594ab35b5"
+            ]
+        ]
+    },
+    {
+        "id": "2eaeb4b149409f42",
+        "type": "inject",
+        "z": "c37fa3218a0ef34e",
+        "g": "e73d1874985f71cd",
+        "name": "Get monitor configuration daily",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "86400",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 190,
+        "y": 260,
+        "wires": [
+            [
+                "2fd41b97d426b7ef"
+            ]
+        ]
+    },
+    {
+        "id": "8e5e3fd5795f8f28",
+        "type": "delay",
+        "z": "c37fa3218a0ef34e",
+        "g": "1ce9a09eb506506e",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "10",
+        "nbRateUnits": "1",
+        "rateUnits": "hour",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 220,
+        "y": 540,
+        "wires": [
+            [
+                "eda4a33d24a0bcf7"
+            ]
+        ]
+    },
+    {
+        "id": "eda4a33d24a0bcf7",
+        "type": "e-mail",
+        "z": "c37fa3218a0ef34e",
+        "d": true,
+        "g": "1ce9a09eb506506e",
+        "server": "smtp.fastmail.com",
+        "port": "465",
+        "secure": true,
+        "tls": true,
+        "name": "recipient",
+        "dname": "",
+        "x": 440,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "def83f723a4db395",
+        "type": "link in",
+        "z": "c37fa3218a0ef34e",
+        "g": "1ce9a09eb506506e",
+        "name": "Email",
+        "links": [
+            "867126965f0a926f",
+            "34d3082db1285a83"
+        ],
+        "x": 55,
+        "y": 540,
+        "wires": [
+            [
+                "8e5e3fd5795f8f28"
+            ]
+        ]
+    },
+    {
+        "id": "867126965f0a926f",
+        "type": "link out",
+        "z": "c37fa3218a0ef34e",
+        "g": "b7cf11b5ea504e64",
+        "name": "",
+        "mode": "link",
+        "links": [
+            "def83f723a4db395"
+        ],
+        "x": 475,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "34d3082db1285a83",
+        "type": "link out",
+        "z": "c37fa3218a0ef34e",
+        "g": "7f411bdffd15e79b",
+        "name": "",
+        "mode": "link",
+        "links": [
+            "def83f723a4db395"
+        ],
+        "x": 1235,
+        "y": 420,
+        "wires": []
+    }
+]
