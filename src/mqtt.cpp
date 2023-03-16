@@ -41,7 +41,8 @@ namespace mqtt {
 
   char* cloneStr(const char* original) {
     char* copy = (char*)malloc(strlen(original) + 1);
-    strcpy(copy, original);
+    strncpy(copy, original, strlen(original));
+    copy[strlen(original)] = 0x00;
     return copy;
   }
 
@@ -51,31 +52,42 @@ namespace mqtt {
     msg.cmd = X_CMD_PUBLISH_SENSORS;
     msg.payload = _payload;
     msg.statusMessage = cloneStr(name);
-    if (mqttQueue) xQueueSendToBack(mqttQueue, (void*)&msg, pdMS_TO_TICKS(100));
+    if (!mqttQueue || !xQueueSendToBack(mqttQueue, (void*)&msg, pdMS_TO_TICKS(100))) {
+      delete msg.payload;
+      free(msg.statusMessage);
+    }
   }
 
-  boolean publishMeasurementInternal(MqttMessage queueMsg) {
+  boolean publishMeasurementInternal(MqttMessage queueMsg, boolean keepOnFailure) {
     char topic[256];
     char msg[256];
 
     sprintf(topic, "%s/%u/up/sensors/%s", config.mqttTopic, config.deviceId, queueMsg.statusMessage);
-    free(queueMsg.statusMessage);
     // Serialize JSON to file
     if (serializeJson(*queueMsg.payload, msg) == 0) {
       ESP_LOGW(TAG, "Failed to serialise payload");
       delete queueMsg.payload;
+      free(queueMsg.statusMessage);
       return true; // pretend to have been successful to prevent queue from clogging up
     }
-    delete queueMsg.payload;
     if (strncmp(msg, "null", 4) == 0) {
       ESP_LOGD(TAG, "Nothing to publish");
+      delete queueMsg.payload;
+      free(queueMsg.statusMessage);
       return true; // pretend to have been successful to prevent queue from clogging up
     }
     ESP_LOGD(TAG, "Publishing sensor values: %s:%s", topic, msg);
     if (!mqtt_client->publish(topic, msg)) {
-      ESP_LOGE(TAG, "publish sensors failed!");
+      ESP_LOGI(TAG, "publish sensors failed!");
+      if (!keepOnFailure) {
+        delete queueMsg.payload;
+        free(queueMsg.statusMessage);
+      }
+      // don't free heap, since message will be re-tried
       return false;
     }
+    delete queueMsg.payload;
+    free(queueMsg.statusMessage);
     return true;
   }
 
@@ -118,7 +130,7 @@ namespace mqtt {
       ESP_LOGD(TAG, "Test MQTT connected");
       sprintf(buf, "%s/%u/up/status", testConfig.mqttTopic, testConfig.deviceId);
       mqttTestSuccess = testMqttClient->publish(buf, "{\"test\":true}");
-      if (!mqttTestSuccess) ESP_LOGE(TAG, "connecting using new mqtt settings failed!");
+      if (!mqttTestSuccess) ESP_LOGI(TAG, "connecting using new mqtt settings failed!");
     }
     delete testMqttClient;
     return mqttTestSuccess;
@@ -148,20 +160,27 @@ namespace mqtt {
     sprintf(buf, "%s/%u/up/config", config.mqttTopic, config.deviceId);
     ESP_LOGI(TAG, "Publishing configuration: %s:%s", buf, msg);
     if (!mqtt_client->publish(buf, msg)) {
-      ESP_LOGE(TAG, "publish configuration failed!");
+      ESP_LOGI(TAG, "publish configuration failed!");
       return false;
     }
     return true;
   }
 
   void publishStatusMsg(const char* statusMessage) {
+    if (strlen(statusMessage) > 200) {
+      ESP_LOGW(TAG, "msg too long - discarding");
+      return;
+    }
+
     MqttMessage msg;
     msg.cmd = X_CMD_PUBLISH_STATUS_MSG;
     msg.statusMessage = cloneStr(statusMessage);
-    if (mqttQueue) xQueueSendToBack(mqttQueue, (void*)&msg, pdMS_TO_TICKS(100));
+    if (!mqttQueue || !xQueueSendToBack(mqttQueue, (void*)&msg, pdMS_TO_TICKS(100))) {
+      free(msg.statusMessage);
+    }
   }
 
-  boolean publishStatusMsgInternal(char* statusMessage) {
+  boolean publishStatusMsgInternal(char* statusMessage, boolean keepOnFailure) {
     if (strlen(statusMessage) > 200) {
       free(statusMessage);
       return true;// pretend to have been successful to prevent queue from clogging up
@@ -171,15 +190,18 @@ namespace mqtt {
     char msg[256];
     doc.clear();
     doc["msg"] = statusMessage;
-    free(statusMessage);
     if (serializeJson(doc, msg) == 0) {
       ESP_LOGW(TAG, "Failed to serialise payload");
+      free(statusMessage);
       return true;// pretend to have been successful to prevent queue from clogging up
     }
     if (!mqtt_client->publish(topic, msg)) {
-      ESP_LOGE(TAG, "publish status msg failed!");
+      ESP_LOGI(TAG, "publish status msg failed!");
+      if (!keepOnFailure) free(statusMessage);
+      // don't free heap, since message will be re-tried      
       return false;
     }
+    free(statusMessage);
     return true;
   }
 
@@ -263,7 +285,7 @@ namespace mqtt {
         }
       }
       if (saveConfiguration(config) && rebootRequired) {
-        publishStatusMsgInternal(cloneStr("configuration updated - rebooting shortly"));
+        publishStatusMsgInternal(cloneStr("configuration updated - rebooting shortly"), false);
         delay(2000);
         esp_restart();
       }
@@ -271,7 +293,7 @@ namespace mqtt {
       ESP_LOGD(TAG, "installMqttRootCa");
       if (!writeFile(TEMP_MQTT_ROOT_CA_FILENAME, (unsigned char*)&msg[0])) {
         ESP_LOGW(TAG, "Error writing mqtt root ca");
-        publishStatusMsgInternal(cloneStr("Error writing cert to FS"));
+        publishStatusMsgInternal(cloneStr("Error writing cert to FS"), false);
         return;
       }
       bool mqttTestSuccess = config.mqttInsecure || !config.mqttUseTls; // no need to test if not using tls, or not checking certs
@@ -287,11 +309,11 @@ namespace mqtt {
       if (mqttTestSuccess) {
         if (LittleFS.exists(MQTT_ROOT_CA_FILENAME) && !LittleFS.remove(MQTT_ROOT_CA_FILENAME)) {
           ESP_LOGE(TAG, "Failed to remove original CA file");
-          publishStatusMsgInternal(cloneStr("Could not remove original CA - giving up"));
+          publishStatusMsgInternal(cloneStr("Could not remove original CA - giving up"), false);
           return;  // leave old file in place and give up.
         }
         if (!LittleFS.rename(TEMP_MQTT_ROOT_CA_FILENAME, MQTT_ROOT_CA_FILENAME)) {
-          publishStatusMsgInternal(cloneStr("Could not replace original CA with new CA - PANIC - giving up"));
+          publishStatusMsgInternal(cloneStr("Could not replace original CA with new CA - PANIC - giving up"), false);
           ESP_LOGE(TAG, "Failed to move temporary CA file");
           config.mqttInsecure = true;
           saveConfiguration(config);
@@ -300,19 +322,19 @@ namespace mqtt {
           return;
         }
         ESP_LOGI(TAG, "installed and tested new CA, rebooting shortly");
-        publishStatusMsgInternal(cloneStr("installed and tested new CA - rebooting shortly"));
+        publishStatusMsgInternal(cloneStr("installed and tested new CA - rebooting shortly"), false);
         delay(2000);
         esp_restart();
       } else {
-        ESP_LOGE(TAG, "publish connect msg failed!");
-        publishStatusMsgInternal(cloneStr("Connecting using the new CA failed - reverting"));
+        ESP_LOGI(TAG, "publish connect msg failed!");
+        publishStatusMsgInternal(cloneStr("Connecting using the new CA failed - reverting"), false);
         if (!LittleFS.remove(TEMP_MQTT_ROOT_CA_FILENAME)) ESP_LOGW(TAG, "Failed to remove temporary CA file");
       }
     } else if (strncmp(buf, "installRootCa", strlen(buf)) == 0) {
       ESP_LOGD(TAG, "installRootCa");
       if (!writeFile(ROOT_CA_FILENAME, (unsigned char*)&msg[0])) {
         ESP_LOGW(TAG, "Error writing root ca");
-        publishStatusMsgInternal(cloneStr("Error writing cert to FS"));
+        publishStatusMsgInternal(cloneStr("Error writing cert to FS"), false);
       }
     } else if (strncmp(buf, "resetWifi", strlen(buf)) == 0) {
       WifiManager::resetSettings();
@@ -327,13 +349,21 @@ namespace mqtt {
 
   void reconnect() {
     if (!WiFi.isConnected() || mqtt_client->connected()) return;
-    if (millis() - lastReconnectAttempt < 60000) return;
+    if (millis() - lastReconnectAttempt < 5000) return;
     char topic[256];
     sprintf(topic, "Aranet-proxy-%u-%s", config.deviceId, WifiManager::getMac().c_str());
     lastReconnectAttempt = millis();
     ESP_LOGD(TAG, "Attempting MQTT connection...");
     connectionAttempts++;
-    if (mqtt_client->connect(topic, config.mqttUsername, config.mqttPassword)) {
+    sprintf(topic, "%s/%u/up/status", config.mqttTopic, config.deviceId);
+    boolean result = false;
+    if (!takeRadioMutex(MQTT_MUTEX_DEF_WAIT)) {
+      ESP_LOGI(TAG, "Failed taking mutex - skipping mqtt connect");
+    } else {
+      result = mqtt_client->connect(topic, config.mqttUsername, config.mqttPassword, topic, 1, false, "{\"msg\":\"disconnected\"}");
+      giveRadioMutex();
+    }
+    if (result) {
       ESP_LOGD(TAG, "MQTT connected");
       sprintf(topic, "%s/%u/down/#", config.mqttTopic, config.deviceId);
       mqtt_client->subscribe(topic);
@@ -351,7 +381,7 @@ namespace mqtt {
       if (mqtt_client->publish(topic, msg))
         connectionAttempts = 0;
       else
-        ESP_LOGE(TAG, "publish connect msg failed!");
+        ESP_LOGI(TAG, "publish connect msg failed!");
     } else {
       ESP_LOGW(TAG, "MQTT connection failed, rc=%i", mqtt_client->state());
       vTaskDelay(pdMS_TO_TICKS(1000));
@@ -389,23 +419,26 @@ namespace mqtt {
       //      notified = xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
       notified = xQueuePeek(mqttQueue, &msg, pdMS_TO_TICKS(100));
       if (notified == pdPASS) {
-        if (!takeRadioMutex(MQTT_MUTEX_DEF_WAIT)) {
-          ESP_LOGI(TAG, "Failed taking mutex - skipping publish op");
-        } else {
-          if (msg.cmd == X_CMD_PUBLISH_CONFIGURATION) {
-            if (publishConfigurationInternal()) {
+        if (mqtt_client->connected()) {
+          if (!takeRadioMutex(MQTT_MUTEX_DEF_WAIT)) {
+            ESP_LOGI(TAG, "Failed taking mutex - skipping publish op");
+          } else {
+            if (msg.cmd == X_CMD_PUBLISH_CONFIGURATION) {
+              if (publishConfigurationInternal()) {
+                xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
+              }
+            } else if (msg.cmd == X_CMD_PUBLISH_SENSORS) {
+              // don't keep measurements in the queue should they fail to be published
+              publishMeasurementInternal(msg, false);
               xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
+            } else if (msg.cmd == X_CMD_PUBLISH_STATUS_MSG) {
+              // keep status messages in the queue should they fail to be published
+              if (publishStatusMsgInternal(msg.statusMessage, true)) {
+                xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
+              }
             }
-          } else if (msg.cmd == X_CMD_PUBLISH_SENSORS) {
-            if (publishMeasurementInternal(msg)) {
-              xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
-            }
-          } else if (msg.cmd == X_CMD_PUBLISH_STATUS_MSG) {
-            if (publishStatusMsgInternal(msg.statusMessage)) {
-              xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
-            }
+            giveRadioMutex();
           }
-          giveRadioMutex();
         }
       }
       if (!mqtt_client->connected()) {
