@@ -1,4 +1,4 @@
-# ESP32-basedc Aranet proxy
+# ESP32-based Aranet proxy
 
 Connect an ESP32 to a number of Aranet4 CO2 monitors via Bluetooth Low Energy and continously push the readings via MQTT.
 
