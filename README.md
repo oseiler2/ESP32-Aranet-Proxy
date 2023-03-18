@@ -2,6 +2,8 @@
 
 Connect an ESP32 to a number of Aranet4 CO2 monitors via Bluetooth Low Energy and continously push the readings via MQTT.
 
+Note that the Aranets must be configured to allow 'Smart Home Integration', which can be set using their app.
+
 Also see my [CO2 Monitor](https://github.com/oseiler2/CO2Monitor) which shares some of the same principles and code base.
 
 # Why use a CO2 Monitor?
