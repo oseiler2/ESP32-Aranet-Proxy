@@ -4,7 +4,7 @@
 #include <globals.h>
 #include <ArduinoJson.h>
 
-#define MQTT_MUTEX_DEF_WAIT pdMS_TO_TICKS(15000)
+#define MQTT_MUTEX_DEF_WAIT pdMS_TO_TICKS(2000)
 
 // If you issue really large certs (e.g. long CN, extra options) this value may need to be
 // increased, but 1600 is plenty for a typical CN and standard option openSSL issued cert.

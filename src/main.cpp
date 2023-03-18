@@ -6,6 +6,7 @@
 #include <i2c.h>
 #include <esp_event.h>
 #include <esp_err.h>
+#include <esp_task_wdt.h>
 
 #include <configManager.h>
 #include <mqtt.h>
@@ -153,6 +154,8 @@ void giveRadioMutex() {
 }
 
 void setup() {
+  esp_task_wdt_init(20, true);
+
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   pinMode(BTN_1, INPUT_PULLUP);
