@@ -125,6 +125,8 @@ namespace mqtt {
     PubSubClient* testMqttClient = new PubSubClient(*wifiClient);
     testMqttClient->setServer(testConfig.mqttHost, testConfig.mqttServerPort);
     sprintf(buf, "Aranet-proxy-%u-%s", testConfig.deviceId, WifiManager::getMac().c_str());
+    // disconnect current connection if not enough heap avalable to initiate another tls session.
+    if (testConfig.mqttUseTls && ESP.getFreeHeap() < 75000) mqtt_client->disconnect();
     mqttTestSuccess = testMqttClient->connect(buf, testConfig.mqttUsername, testConfig.mqttPassword);
     if (mqttTestSuccess) {
       ESP_LOGD(TAG, "Test MQTT connected");
