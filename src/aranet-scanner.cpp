@@ -37,6 +37,9 @@ AranetScanner::AranetScanner(updateMessageCallback_t _updateMessageCallback, pub
 
   Aranet4::init();
   this->aranet = new Aranet4(this);
+  ESP_ERROR_CHECK(esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9));
+  ESP_ERROR_CHECK(esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9));
+  ESP_ERROR_CHECK(esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9));
 }
 
 AranetScanner::~AranetScanner() {}
