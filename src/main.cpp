@@ -222,7 +222,7 @@ void setup() {
 
   ESP_LOGI(TAG, "Setup done.");
 #ifdef SHOW_DEBUG_MSGS
-  if (I2C::lcdPresent()) {
+  if (lcd) {
     lcd->updateMessage("Setup done.");
   }
 #endif
