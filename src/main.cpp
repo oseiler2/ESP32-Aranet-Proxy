@@ -100,19 +100,33 @@ void logCoreInfo() {
 void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
   if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ESP_LOGD(TAG, "eventHandler IP_EVENT IP_EVENT_STA_GOT_IP");
+#ifdef SHOW_DEBUG_MSGS
+    if (lcd) lcd->updateMessage("IP_EVENT_STA_GOT_IP");
+#endif
   } else if (event_base == WIFI_EVENT) {
     switch (event_id) {
       case WIFI_EVENT_STA_CONNECTED:
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_CONNECTED");
+#ifdef SHOW_DEBUG_MSGS
+        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_CONNECTED");
+#endif
         wifiDisconnected = 0;
         digitalWrite(LED_PIN, HIGH);
         break;
       case WIFI_EVENT_STA_DISCONNECTED:
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_DISCONNECTED");
+#ifdef SHOW_DEBUG_MSGS        
+        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_DISCONNECTED");
+#endif
         wifiDisconnected = 1;
         digitalWrite(LED_PIN, LOW);
         break;
       default:
+#ifdef SHOW_DEBUG_MSGS
+        char msg[40];
+        sprintf(msg, "WIFI_EVENT %u", event_id);
+        if (lcd) lcd->updateMessage(msg);
+#endif
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT %u", event_id);
         break;
     }
