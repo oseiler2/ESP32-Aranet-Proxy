@@ -141,21 +141,16 @@ void AranetScanner::scan() {
           break;
         }
       }
-      if (!found) {
+      if (!found && (device.getName().length() >= 8 + 5)) {
         AranetMonitor* aranetMonitor = new AranetMonitor();
         const char* name = device.getName().c_str();
-        if (strncmp(name, "Aranet4 ", 8) == 0) {
-          strncpy(aranetMonitor->name, name + 8, sizeof(aranetMonitor->name));
-        } else {
-          strncpy(aranetMonitor->name, name, sizeof(aranetMonitor->name));
-        }
-        aranetMonitor->name[sizeof(aranetMonitor->name) - 1] = 0x00;
+        strncpy(aranetMonitor->name, name + 8, 5);
+        aranetMonitor->name[5] = 0x00;
 
-        ESP_LOGI(TAG, "New Aranet found %s", name);
-        ESP_LOGD(TAG, "%s v%u.%u.%u RSSI: %i", name, deviceData.version.major, deviceData.version.minor, deviceData.version.patch, device.getRSSI());
+        ESP_LOGI(TAG, "New Aranet found %s [v%u.%u.%u RSSI: %i]", aranetMonitor->name, deviceData.version.major, deviceData.version.minor, deviceData.version.patch, device.getRSSI());
         if (deviceData.data.co2 > 0) {
           //          ESP_LOGD(TAG, "%i ppm, %.2f C, %.1f hPa, %i %%rH, %i %%bat, int: %is, %is ago", deviceData.data.co2, deviceData.data.temperature / 20.0, deviceData.data.pressure / 10.0, deviceData.data.humidity, deviceData.data.battery, deviceData.data.interval, deviceData.data.ago);
-          sprintf(msg, "Found Aranet %s v%u.%u.%u", name, deviceData.version.major, deviceData.version.minor, deviceData.version.patch);
+          sprintf(msg, "Found Aranet %s v%u.%u.%u", aranetMonitor->name, deviceData.version.major, deviceData.version.minor, deviceData.version.patch);
           this->publishMessageCallback(msg);
         } else {
           ESP_LOGI(TAG, "Found Aranet %s but cannot access data - please enable 'Smart Home integration' on Aranet monitor", name);
