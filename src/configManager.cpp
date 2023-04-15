@@ -91,6 +91,7 @@ boolean loadConfiguration(Config& config) {
   DeserializationError error = deserializeJson(doc, file);
   if (error) {
     ESP_LOGW(TAG, "Failed to parse config file: %s", error.f_str());
+    file.close();
     return false;
   }
 
