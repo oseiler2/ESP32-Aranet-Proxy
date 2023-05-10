@@ -17,8 +17,10 @@ extern boolean takeRadioMutex(TickType_t blockTime);
 extern void giveRadioMutex();
 
 namespace mqtt {
+  typedef const char* (*readAranetFileCallback_t)(void);
+  typedef boolean(*writeAranetFileCallback_t)(unsigned char*);
 
-  void setupMqtt();
+  void setupMqtt(readAranetFileCallback_t readAranetFileCallback, writeAranetFileCallback_t writeAranetFileCallback);
 
   void publishMeasurement(const char* name, DynamicJsonDocument* payload);
   void publishConfiguration();

@@ -7,6 +7,7 @@
 #include <esp_event.h>
 #include <esp_err.h>
 #include <esp_task_wdt.h>
+#include <rom/rtc.h>
 
 #include <configManager.h>
 #include <mqtt.h>
@@ -167,6 +168,15 @@ void giveRadioMutex() {
   xSemaphoreGive(radioMutex);
 }
 
+boolean writeAranetDevices(unsigned char* json) {
+  if (aranetScanner) return aranetScanner->writeAranetDevices(json);
+  return false;
+}
+const char* readAranetDevices(void) {
+  if (aranetScanner) return aranetScanner->readAranetDevices();
+  return "";
+}
+
 void setup() {
   esp_task_wdt_init(20, true);
 
@@ -178,6 +188,8 @@ void setup() {
   ESP_LOGI(TAG, "Aranet Proxy v%s. Built from %s @ %s", APP_VERSION, SRC_REVISION, BUILD_TIMESTAMP);
 
   logCoreInfo();
+
+  RESET_REASON resetReason = rtc_get_reset_reason(0);
 
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, eventHandler, NULL));
@@ -200,7 +212,10 @@ void setup() {
   WiFi.begin();
   lastWifiReconnectAttempt = millis();
 
-  mqtt::setupMqtt();
+  mqtt::setupMqtt(readAranetDevices, writeAranetDevices);
+  char msg[128];
+  sprintf(msg, "Reset reason: %u", resetReason);
+  mqtt::publishStatusMsg(msg);
 
   aranetScanner = new AranetScanner(updateMessage, publishMeasurement, publishMessage);
 

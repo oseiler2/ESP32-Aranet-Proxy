@@ -10,6 +10,7 @@
 #include <configManager.h>
 #include <wifiManager.h>
 #include <ota.h>
+#include <aranet-scanner.h>
 
 #include <LittleFS.h>
 
@@ -27,6 +28,7 @@ namespace mqtt {
   const uint8_t X_CMD_PUBLISH_SENSORS = bit(0);
   const uint8_t X_CMD_PUBLISH_CONFIGURATION = bit(1);
   const uint8_t X_CMD_PUBLISH_STATUS_MSG = bit(2);
+  const uint8_t X_CMD_PUBLISH_ARANET_DEVICES = bit(3);
 
   TaskHandle_t mqttTask;
   QueueHandle_t mqttQueue;
@@ -37,7 +39,10 @@ namespace mqtt {
   uint32_t lastReconnectAttempt = 0;
   uint16_t connectionAttempts = 0;
 
-  StaticJsonDocument<CONFIG_SIZE> doc;
+  DynamicJsonDocument doc(CONFIG_SIZE);
+
+  readAranetFileCallback_t readAranetFileCallback;
+  writeAranetFileCallback_t writeAranetFileCallback;
 
   char* cloneStr(const char* original) {
     char* copy = (char*)malloc(strlen(original) + 1);
@@ -99,19 +104,19 @@ namespace mqtt {
   }
 
   void setMqttCerts(WiFiClientSecure* wifiClient, const char* mqttRootCertFilename, const char* mqttClientKeyFilename, const char* mqttClientCertFilename) {
-    File root_ca_file = LittleFS.open(mqttRootCertFilename, "r");
+    File root_ca_file = LittleFS.open(mqttRootCertFilename, FILE_READ);
     if (root_ca_file) {
       ESP_LOGD(TAG, "Loading MQTT root ca from FS (%s)", mqttRootCertFilename);
       wifiClient->loadCACert(root_ca_file, root_ca_file.size());
       root_ca_file.close();
     }
-    File client_key_file = LittleFS.open(mqttClientKeyFilename, "r");
+    File client_key_file = LittleFS.open(mqttClientKeyFilename, FILE_READ);
     if (client_key_file) {
       ESP_LOGD(TAG, "Loading MQTT client key from FS (%s)", mqttClientKeyFilename);
       wifiClient->loadPrivateKey(client_key_file, client_key_file.size());
       client_key_file.close();
     }
-    File client_cert_file = LittleFS.open(mqttClientCertFilename, "r");
+    File client_cert_file = LittleFS.open(mqttClientCertFilename, FILE_READ);
     if (client_cert_file) {
       ESP_LOGD(TAG, "Loading MQTT client cert from FS (%s)", mqttClientCertFilename);
       wifiClient->loadCertificate(client_cert_file, client_cert_file.size());
@@ -173,7 +178,6 @@ namespace mqtt {
       ESP_LOGW(TAG, "msg too long - discarding");
       return;
     }
-
     MqttMessage msg;
     msg.cmd = X_CMD_PUBLISH_STATUS_MSG;
     msg.statusMessage = cloneStr(statusMessage);
@@ -204,6 +208,24 @@ namespace mqtt {
       return false;
     }
     free(statusMessage);
+    return true;
+  }
+
+  void publishAranetDevices() {
+    MqttMessage msg;
+    msg.cmd = X_CMD_PUBLISH_ARANET_DEVICES;
+    if (!mqttQueue || !xQueueSendToBack(mqttQueue, (void*)&msg, pdMS_TO_TICKS(100))) {
+      //      free(msg.);
+    }
+  }
+
+  boolean publishAranetDevicesInternal() {
+    const char* json = readAranetFileCallback();
+    char topic[256];
+    sprintf(topic, "%s/%u/up/aranetDevices", config.mqttTopic, config.deviceId);
+    if (!mqtt_client->publish(topic, json)) {
+      ESP_LOGI(TAG, "publish Aranet devices failed!");
+    }
     return true;
   }
 
@@ -338,6 +360,14 @@ namespace mqtt {
         ESP_LOGW(TAG, "Error writing root ca");
         publishStatusMsgInternal(cloneStr("Error writing cert to FS"), false);
       }
+    } else if (strncmp(buf, "readAranetDevices", strlen(buf)) == 0) {
+      publishAranetDevices();
+    } else if (strncmp(buf, "writeAranetDevices", strlen(buf)) == 0) {
+      if (writeAranetFileCallback((unsigned char*)&msg[0])) {
+        publishStatusMsgInternal(cloneStr("Aranet devices updated - rebooting shortly"), false);
+        delay(2000);
+        esp_restart();
+      }
     } else if (strncmp(buf, "resetWifi", strlen(buf)) == 0) {
       WifiManager::resetSettings();
     } else if (strncmp(buf, "ota", strlen(buf)) == 0) {
@@ -389,7 +419,10 @@ namespace mqtt {
     giveRadioMutex();
   }
 
-  void setupMqtt() {
+  void setupMqtt(readAranetFileCallback_t _readAranetFileCallback, writeAranetFileCallback_t _writeAranetFileCallback) {
+    readAranetFileCallback = _readAranetFileCallback;
+    writeAranetFileCallback = _writeAranetFileCallback;
+
     mqttQueue = xQueueCreate(MQTT_QUEUE_LENGTH, sizeof(struct MqttMessage));
     if (mqttQueue == NULL) {
       ESP_LOGE(TAG, "Queue creation failed!");
@@ -435,6 +468,11 @@ namespace mqtt {
             } else if (msg.cmd == X_CMD_PUBLISH_STATUS_MSG) {
               // keep status messages in the queue should they fail to be published
               if (publishStatusMsgInternal(msg.statusMessage, true)) {
+                xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
+              }
+            } else if (msg.cmd == X_CMD_PUBLISH_ARANET_DEVICES) {
+              // don't keep device info request in the queue should they fail to be published
+              if (publishAranetDevicesInternal()) {
                 xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
               }
             }
