@@ -86,7 +86,7 @@ void LCD::update(AranetMonitor* monitor) {
   if (!I2C::takeMutex(I2C_MUTEX_DEF_WAIT)) return;
 
   // 8-24 vs 12-40
-  this->display->writeFillRect(4, line1_y, 120, line_height * 3, BLACK);
+  this->display->writeFillRect(0, line1_y, 128, line_height * 3, BLACK);
 
   // line 1
   this->display->setFont(config.ssd1306Rows == 32 ? NULL : FONT_9);
