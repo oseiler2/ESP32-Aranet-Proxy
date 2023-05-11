@@ -18,6 +18,7 @@
 #include <LittleFS.h>
 #include <wifiManager.h>
 #include <ota.h>
+#include <timekeeper.h>
 
 // Local logging tag
 static const char TAG[] = __FILE__;
@@ -101,6 +102,7 @@ void logCoreInfo() {
 void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
   if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     ESP_LOGD(TAG, "eventHandler IP_EVENT IP_EVENT_STA_GOT_IP");
+    Timekeeper::initSntp();
 #ifdef SHOW_DEBUG_MSGS
     if (lcd) lcd->updateMessage("IP_EVENT_STA_GOT_IP");
 #endif
@@ -201,6 +203,8 @@ void setup() {
     saveConfiguration(config);
   }
   logConfiguration(config);
+
+  Timekeeper::init();
 
   Wire.begin((int)SDA_PIN, (int)SCL_PIN, (uint32_t)I2C_CLK);
 

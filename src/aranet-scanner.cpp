@@ -7,6 +7,7 @@
 #include <FS.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <timekeeper.h>
 
 // Local logging tag
 static const char TAG[] = __FILE__;
@@ -279,6 +280,11 @@ void AranetScanner::queryKnownMonitors() {
           (*payload)["humidity"] = data.humidity;
           (*payload)["battery"] = data.battery;
           (*payload)["rssi"] = this->lastRssi;
+          if (Timekeeper::isSynchronised()) {
+            time_t now;
+            time(&now);
+            (*payload)["time"] = now - data.ago;
+          }
 
           publishMeasurement(aranetMonitor->code, payload);
         } else {
