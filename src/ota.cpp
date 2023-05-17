@@ -68,8 +68,8 @@ namespace OTA {
     mqtt::publishStatusMsg("Starting forced OTA update");
     setPriorityMessageCallback("Starting OTA update");
     esp32FOTA.forceUpdate(forceUpdateURL, false);
-    ESP_LOGD(TAG, "Forced OTA done");
     forceUpdateURL = "";
+    ESP_LOGD(TAG, "Forced OTA done");
     setPriorityMessageCallback("Rebooting");
     delay(1000);
     clearPriorityMessageCallback();
