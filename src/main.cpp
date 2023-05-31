@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <config.h>
 
+#include <M5Unified.h>
+
 #include <WiFi.h>
 #include <i2c.h>
 #include <esp_event.h>
@@ -14,6 +16,7 @@
 #include <aranet-scanner.h>
 #include <housekeeping.h>
 #include <lcd.h>
+#include <M5LCD.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <wifiManager.h>
@@ -24,6 +27,7 @@
 static const char TAG[] = __FILE__;
 
 LCD* lcd;
+M5LCD* m5lcd;
 AranetScanner* aranetScanner;
 
 TaskHandle_t aranetScannerTask;
@@ -41,7 +45,7 @@ volatile uint8_t wifiDisconnected = 0;
 uint32_t lastWifiReconnectAttempt = 0;
 
 void ICACHE_RAM_ATTR buttonHandler() {
-  buttonState = (digitalRead(BTN_1) ? 0 : 1);
+  if (BTN_1 >= 0) buttonState = (digitalRead(BTN_1) ? 0 : 1);
   lastBtnDebounceTime = millis();
 }
 
@@ -53,17 +57,26 @@ void updateMessage(char const* msg) {
   if (lcd) {
     lcd->updateMessage(msg);
   }
+  if (m5lcd) {
+    m5lcd->updateMessage(msg);
+  }
 }
 
 void setPriorityMessage(char const* msg) {
   if (lcd) {
     lcd->setPriorityMessage(msg);
   }
+  if (m5lcd) {
+    m5lcd->setPriorityMessage(msg);
+  }
 }
 
 void clearPriorityMessage() {
   if (lcd) {
     lcd->clearPriorityMessage();
+  }
+  if (m5lcd) {
+    m5lcd->clearPriorityMessage();
   }
 }
 
@@ -104,14 +117,14 @@ void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t 
     ESP_LOGD(TAG, "eventHandler IP_EVENT IP_EVENT_STA_GOT_IP");
     Timekeeper::initSntp();
 #ifdef SHOW_DEBUG_MSGS
-    if (lcd) lcd->updateMessage("IP_EVENT_STA_GOT_IP");
+    updateMessage("IP_EVENT_STA_GOT_IP");
 #endif
   } else if (event_base == WIFI_EVENT) {
     switch (event_id) {
       case WIFI_EVENT_STA_CONNECTED:
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_CONNECTED");
 #ifdef SHOW_DEBUG_MSGS
-        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_CONNECTED");
+        updateMessage("WIFI_EVENT_STA_CONNECTED");
 #endif
         wifiDisconnected = 0;
         if (LED_PIN >= 0) digitalWrite(LED_PIN, HIGH);
@@ -119,7 +132,7 @@ void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t 
       case WIFI_EVENT_STA_DISCONNECTED:
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_DISCONNECTED");
 #ifdef SHOW_DEBUG_MSGS        
-        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_DISCONNECTED");
+        updateMessage("WIFI_EVENT_STA_DISCONNECTED");
 #endif
         wifiDisconnected = 1;
         if (LED_PIN >= 0) digitalWrite(LED_PIN, LOW);
@@ -128,7 +141,7 @@ void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t 
 #ifdef SHOW_DEBUG_MSGS
         char msg[40];
         sprintf(msg, "WIFI_EVENT %u", event_id);
-        if (lcd) lcd->updateMessage(msg);
+        updateMessage(msg);
 #endif
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT %u", event_id);
         break;
@@ -150,6 +163,9 @@ void displayTimer() {
   AranetMonitor* mon = aranetScanner->getAranetMonitors().at(timerMonitorIdx);
   if (lcd) {
     lcd->update(mon);
+  }
+  if (m5lcd) {
+    m5lcd->update(mon);
   }
 }
 
@@ -186,7 +202,7 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
   }
-  pinMode(BTN_1, INPUT_PULLUP);
+  if (BTN_1 >= 0) pinMode(BTN_1, INPUT_PULLUP);
   Serial.begin(115200);
   esp_log_level_set("*", ESP_LOG_VERBOSE);
   ESP_LOGI(TAG, "Aranet Proxy v%s. Built from %s @ %s", APP_VERSION, SRC_REVISION, BUILD_TIMESTAMP);
@@ -194,6 +210,8 @@ void setup() {
   logCoreInfo();
 
   RESET_REASON resetReason = rtc_get_reset_reason(0);
+
+  M5.begin();
 
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, eventHandler, NULL));
@@ -208,9 +226,17 @@ void setup() {
 
   Timekeeper::init();
 
+#if defined(SDA_PIN) && defined(SCL_PIN)
   Wire.begin((int)SDA_PIN, (int)SCL_PIN, (uint32_t)I2C_CLK);
+#else
+  Wire.begin();
+#endif
 
   I2C::initI2C();
+
+#ifdef M5LCD_PRESENT
+  m5lcd = new M5LCD();
+#endif
 
   if (I2C::lcdPresent()) lcd = new LCD(&Wire);
 
@@ -251,33 +277,23 @@ void setup() {
 
   OTA::setupOta(prepareOta, setPriorityMessage, clearPriorityMessage);
 
-  attachInterrupt(BTN_1, buttonHandler, CHANGE);
+  if (BTN_1 >= 0)   attachInterrupt(BTN_1, buttonHandler, CHANGE);
 
   displayTicker->attach(3, displayTimer);
 
   ESP_LOGI(TAG, "Setup done.");
 #ifdef SHOW_DEBUG_MSGS
-  if (lcd) {
-    lcd->updateMessage("Setup done.");
-  }
+  updateMessage("Setup done.");
 #endif
 }
 
 void loop() {
-  if (buttonState != oldConfirmedButtonState && (millis() - lastBtnDebounceTime) > debounceDelay) {
-    oldConfirmedButtonState = buttonState;
-    if (oldConfirmedButtonState == 1) {
-      lastConfirmedBtnPressedTime = millis();
-    } else if (oldConfirmedButtonState == 0) {
-      uint32_t btnPressTime = millis() - lastConfirmedBtnPressedTime;
-      ESP_LOGD(TAG, "lastConfirmedBtnPressedTime - millis() %u", btnPressTime);
-      if (btnPressTime < 2000) {
-        if (LED_PIN >= 0) digitalWrite(LED_PIN, LOW);
-        prepareOta();
-        WifiManager::startConfigPortal(updateMessage, setPriorityMessage, clearPriorityMessage);
-      } else if (btnPressTime > 5000) {
-      }
-    }
+  M5.update();
+
+  if (M5.BtnA.wasReleased()) {
+    if (LED_PIN >= 0) digitalWrite(LED_PIN, LOW);
+    prepareOta();
+    WifiManager::startConfigPortal(updateMessage, setPriorityMessage, clearPriorityMessage);
   }
 
   if (wifiDisconnected == 1 && !WiFi.isConnected()) {

@@ -1,3 +1,5 @@
+#include <sdkconfig.h>
+
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
@@ -7,10 +9,10 @@
 
 #if CONFIG_IDF_TARGET_ESP32
 
-#define LED_PIN                2
-#define BTN_1                  0
-#define SDA_PIN              SDA
-#define SCL_PIN              SCL
+#define LED_PIN               -1
+#define BTN_1                 -1
+//#define SDA_PIN              SDA
+//#define SCL_PIN              SCL
 
 #elif CONFIG_IDF_TARGET_ESP32S3
 
