@@ -162,6 +162,9 @@ void displayTimer() {
   if (lcd) {
     lcd->update(mon);
   }
+  if (gc9107) {
+    gc9107->update(mon);
+  }
 }
 
 static SemaphoreHandle_t radioMutex = xSemaphoreCreateMutex();
