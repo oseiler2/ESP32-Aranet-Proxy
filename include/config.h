@@ -11,7 +11,6 @@
 #define BTN_1                  0
 #define SDA_PIN              SDA
 #define SCL_PIN              SCL
-#define SCD30_RDY_PIN         35
 
 #elif CONFIG_IDF_TARGET_ESP32S3
 
@@ -19,7 +18,6 @@
 #define BTN_1                  0
 #define SDA_PIN               14
 #define SCL_PIN               21
-#define SCD30_RDY_PIN         -1
 
 #endif
 
