@@ -6,7 +6,6 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
-#include <i2c.h>
 #include <configManager.h>
 #include <wifiManager.h>
 #include <ota.h>
