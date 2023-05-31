@@ -14,10 +14,10 @@
 
 #elif CONFIG_IDF_TARGET_ESP32S3
 
-#define LED_PIN                2
-#define BTN_1                  0
-#define SDA_PIN               14
-#define SCL_PIN               21
+#define LED_PIN               -1
+#define BTN_1                 41
+#define SDA_PIN               38
+#define SCL_PIN               39
 
 #endif
 

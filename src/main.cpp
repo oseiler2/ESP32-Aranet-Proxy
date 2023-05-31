@@ -14,6 +14,7 @@
 #include <aranet-scanner.h>
 #include <housekeeping.h>
 #include <lcd.h>
+#include <GC9107.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <wifiManager.h>
@@ -24,6 +25,7 @@
 static const char TAG[] = __FILE__;
 
 LCD* lcd;
+GC9107* gc9107;
 AranetScanner* aranetScanner;
 
 TaskHandle_t aranetScannerTask;
@@ -53,17 +55,26 @@ void updateMessage(char const* msg) {
   if (lcd) {
     lcd->updateMessage(msg);
   }
+  if (gc9107) {
+    gc9107->updateMessage(msg);
+  }
 }
 
 void setPriorityMessage(char const* msg) {
   if (lcd) {
     lcd->setPriorityMessage(msg);
   }
+  if (gc9107) {
+    gc9107->setPriorityMessage(msg);
+  }
 }
 
 void clearPriorityMessage() {
   if (lcd) {
     lcd->clearPriorityMessage();
+  }
+  if (gc9107) {
+    gc9107->clearPriorityMessage();
   }
 }
 
@@ -104,14 +115,14 @@ void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t 
     ESP_LOGD(TAG, "eventHandler IP_EVENT IP_EVENT_STA_GOT_IP");
     Timekeeper::initSntp();
 #ifdef SHOW_DEBUG_MSGS
-    if (lcd) lcd->updateMessage("IP_EVENT_STA_GOT_IP");
+    updateMessage("IP_EVENT_STA_GOT_IP");
 #endif
   } else if (event_base == WIFI_EVENT) {
     switch (event_id) {
       case WIFI_EVENT_STA_CONNECTED:
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_CONNECTED");
 #ifdef SHOW_DEBUG_MSGS
-        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_CONNECTED");
+        updateMessage("WIFI_EVENT_STA_CONNECTED");
 #endif
         wifiDisconnected = 0;
         if (LED_PIN >= 0) digitalWrite(LED_PIN, HIGH);
@@ -119,7 +130,7 @@ void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t 
       case WIFI_EVENT_STA_DISCONNECTED:
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_DISCONNECTED");
 #ifdef SHOW_DEBUG_MSGS        
-        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_DISCONNECTED");
+        updateMessage("WIFI_EVENT_STA_DISCONNECTED");
 #endif
         wifiDisconnected = 1;
         if (LED_PIN >= 0) digitalWrite(LED_PIN, LOW);
@@ -128,7 +139,7 @@ void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t 
 #ifdef SHOW_DEBUG_MSGS
         char msg[40];
         sprintf(msg, "WIFI_EVENT %u", event_id);
-        if (lcd) lcd->updateMessage(msg);
+        updateMessage(msg);
 #endif
         ESP_LOGD(TAG, "eventHandler WIFI_EVENT %u", event_id);
         break;
@@ -212,6 +223,10 @@ void setup() {
 
   I2C::initI2C();
 
+#ifdef GC9107_PRESENT
+  gc9107 = new GC9107();
+#endif
+
   if (I2C::lcdPresent()) lcd = new LCD(&Wire);
 
   // try to connect with known settings
@@ -257,9 +272,7 @@ void setup() {
 
   ESP_LOGI(TAG, "Setup done.");
 #ifdef SHOW_DEBUG_MSGS
-  if (lcd) {
-    lcd->updateMessage("Setup done.");
-  }
+  updateMessage("Setup done.");
 #endif
 }
 
