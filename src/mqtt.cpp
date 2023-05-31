@@ -450,7 +450,6 @@ namespace mqtt {
     BaseType_t notified;
     MqttMessage msg;
     while (1) {
-      //      notified = xQueueReceive(mqttQueue, &msg, pdMS_TO_TICKS(100));
       notified = xQueuePeek(mqttQueue, &msg, pdMS_TO_TICKS(100));
       if (notified == pdPASS) {
         if (mqtt_client->connected()) {

@@ -9,14 +9,14 @@ namespace housekeeping {
   Ticker cyclicTimer;
 
   void doHousekeeping() {
-    ESP_LOGD(TAG, "Heap: Free:%d, Min:%d, Size:%d, Alloc:%d, StackHWM:%d",
+    ESP_LOGI(TAG, "Heap: Free:%d, Min:%d, Size:%d, Alloc:%d, StackHWM:%d",
       ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getHeapSize(),
       ESP.getMaxAllocHeap(), uxTaskGetStackHighWaterMark(NULL));
-    ESP_LOGD(TAG, "MqttLoop %d bytes left | Taskstate = %d | core = %u",
+    ESP_LOGI(TAG, "MqttLoop %d bytes left | Taskstate = %d | core = %u",
       uxTaskGetStackHighWaterMark(mqtt::mqttTask), eTaskGetState(mqtt::mqttTask), xTaskGetAffinity(mqtt::mqttTask));
-    ESP_LOGD(TAG, "OtaLoop %d bytes left | Taskstate = %d | core = %u",
+    ESP_LOGI(TAG, "OtaLoop %d bytes left | Taskstate = %d | core = %u",
       uxTaskGetStackHighWaterMark(OTA::otaTask), eTaskGetState(OTA::otaTask), xTaskGetAffinity(OTA::otaTask));
-    ESP_LOGD(TAG, "AranetScannerLoop %d bytes left | Taskstate = %d | core = %u",
+    ESP_LOGI(TAG, "AranetScannerLoop %d bytes left | Taskstate = %d | core = %u",
       uxTaskGetStackHighWaterMark(aranetScannerTask), eTaskGetState(aranetScannerTask), xTaskGetAffinity(aranetScannerTask));
     if (ESP.getMinFreeHeap() <= 2048) {
       ESP_LOGW(TAG,
@@ -26,7 +26,6 @@ namespace housekeeping {
       Serial.flush();
       esp_restart();
     }
-
   }
 
   uint32_t getFreeRAM() {

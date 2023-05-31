@@ -1,5 +1,4 @@
-#include <Arduino.h>
-#include <config.h>
+
 #include <configManager.h>
 
 #include <FS.h>

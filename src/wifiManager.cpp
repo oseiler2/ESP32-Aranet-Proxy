@@ -1,4 +1,4 @@
-#include "globals.h"
+#include <globals.h>
 #include <wifiManager.h>
 #include <config.h>
 
@@ -6,7 +6,8 @@
 #include <ESPAsync_WiFiManager-Impl.h>
 #include <base64.h>
 #include <configManager.h>
-#include <lcd.h>
+
+#include <configParameter.h>
 
 #ifndef AP_PW
 #define AP_PW ""
@@ -40,16 +41,16 @@ namespace WifiManager {
     safeConfigFlag = true;
   }
 
-  ESPAsync_WMParameter* deviceIdParam;
-  ESPAsync_WMParameter* mqttTopicParam;
-  ESPAsync_WMParameter* mqttUsernameParam;
-  ESPAsync_WMParameter* mqttPasswordParam;
-  ESPAsync_WMParameter* mqttHostParam;
-  ESPAsync_WMParameter* mqttPortParam;
-  ESPAsync_WMParameter* mqttUseTlsParam;
-  ESPAsync_WMParameter* mqttInsecureParam;
-  ESPAsync_WMParameter* ssd1306RowsParam;
-  ESPAsync_WMParameter* scanIntervalParam;
+  template <typename T>
+  std::pair<ConfigParameterBase*, ESPAsync_WMParameter*>* toParameterPair(ConfigParameter<T>* configParameter) {
+    char defaultValue[configParameter->getMaxStrLen()];
+    configParameter->print(defaultValue);
+    ESPAsync_WMParameter* espAsyncParam = new ESPAsync_WMParameter(configParameter->getId(), configParameter->getLabel(), defaultValue, configParameter->getMaxStrLen());
+    ESP_LOGD(TAG, "%s: %s", configParameter->getId(), defaultValue);
+    return new std::pair<ConfigParameterBase*, ESPAsync_WMParameter*>(configParameter, espAsyncParam);
+  }
+
+  std::vector<std::pair<ConfigParameterBase*, ESPAsync_WMParameter*>*> configParameterVector;
 
   void setupWifiManager(ESPAsync_WiFiManager* wifiManager) {
     safeConfigFlag = false;
@@ -61,60 +62,20 @@ namespace WifiManager {
     portalIPconfig._ap_static_sn = IPAddress(255, 255, 255, 0);
     wifiManager->setAPStaticIPConfig(portalIPconfig);
 
-    char deviceId[6];
-    char mqttTopic[MQTT_TOPIC_ID_LEN + 1];
-    char mqttUsername[MQTT_USERNAME_LEN + 1];
-    char mqttPassword[MQTT_PASSWORD_LEN + 1];
-    char mqttHost[MQTT_HOSTNAME_LEN + 1];
-    char mqttPort[6];
-    char mqttUseTls[6];
-    char mqttInsecure[6];
-    char ssd1306Rows[3];
-    char scanInterval[6];
+    configParameterVector.push_back(toParameterPair(new Uint16ConfigParameter("deviceId", "Device ID", &(config.*deviceIdPtr))));
+    configParameterVector.push_back(toParameterPair(new CharArrayConfigParameter("mqttTopic", "MQTT topic", &(config.*mqttTopicPtr), MQTT_TOPIC_ID_LEN + 1)));
+    configParameterVector.push_back(toParameterPair(new CharArrayConfigParameter("mqttUsername", "MQTT username", &(config.*mqttUsernamePtr), MQTT_USERNAME_LEN + 1)));
+    configParameterVector.push_back(toParameterPair(new CharArrayConfigParameter("mqttPassword", "MQTT password", &(config.*mqttPasswordPtr), MQTT_PASSWORD_LEN + 1)));
+    configParameterVector.push_back(toParameterPair(new CharArrayConfigParameter("mqttHost", "MQTT host", &(config.*mqttHostPtr), MQTT_HOSTNAME_LEN + 1)));
+    configParameterVector.push_back(toParameterPair(new Uint16ConfigParameter("mqttServerPort", "MQTT port", &(config.*mqttServerPortPtr))));
+    configParameterVector.push_back(toParameterPair(new BooleanConfigParameter("mqttUseTls", "MQTT use TLS", &(config.*mqttUseTlsPtr))));
+    configParameterVector.push_back(toParameterPair(new BooleanConfigParameter("mqttInsecure", "MQTT Ignore certificate errors", &(config.*mqttInsecurePtr))));
+    configParameterVector.push_back(toParameterPair(new Uint8ConfigParameter("ssd1306Rows", "SSD1306 rows", &(config.*ssd1306RowsPtr))));
+    configParameterVector.push_back(toParameterPair(new Uint16ConfigParameter("scanInterval", "Scan interval (sec)", &(config.*scanIntervalPtr))));
 
-    sprintf(deviceId, "%u", config.deviceId);
-    sprintf(mqttTopic, "%s", config.mqttTopic);
-    sprintf(mqttUsername, "%s", config.mqttUsername);
-    sprintf(mqttPassword, "%s", config.mqttPassword);
-    sprintf(mqttHost, "%s", config.mqttHost);
-    sprintf(mqttPort, "%u", config.mqttServerPort);
-    sprintf(mqttUseTls, "%s", config.mqttUseTls ? "true" : "false");
-    sprintf(mqttInsecure, "%s", config.mqttInsecure ? "true" : "false");
-    sprintf(ssd1306Rows, "%u", config.ssd1306Rows);
-    sprintf(scanInterval, "%u", config.scanInterval);
-
-    ESP_LOGD(TAG, "deviceId: %s", deviceId);
-    ESP_LOGD(TAG, "mqttTopic: %s", mqttTopic);
-    ESP_LOGD(TAG, "mqttUsername: %s", mqttUsername);
-    ESP_LOGD(TAG, "mqttPassword: %s", mqttPassword);
-    ESP_LOGD(TAG, "mqttHost: %s", mqttHost);
-    ESP_LOGD(TAG, "mqttPort: %s", mqttPort);
-    ESP_LOGD(TAG, "mqttUseTls: %s", mqttUseTls);
-    ESP_LOGD(TAG, "mqttInsecure: %s", mqttInsecure);
-    ESP_LOGD(TAG, "ssd1306Rows: %s", ssd1306Rows);
-    ESP_LOGD(TAG, "scanInterval: %s", scanInterval);
-
-    deviceIdParam = new ESPAsync_WMParameter("deviceId", "Device ID", deviceId, 6, "config.deviceId");
-    mqttTopicParam = new ESPAsync_WMParameter("mqttTopic", "MQTT topic", mqttTopic, MQTT_TOPIC_ID_LEN + 1, config.mqttTopic);
-    mqttUsernameParam = new ESPAsync_WMParameter("mqttUsername", "MQTT username", mqttUsername, MQTT_USERNAME_LEN + 1, config.mqttUsername);
-    mqttPasswordParam = new ESPAsync_WMParameter("mqttPassword", "MQTT password", mqttPassword, MQTT_PASSWORD_LEN + 1, config.mqttPassword);
-    mqttHostParam = new ESPAsync_WMParameter("mqttHost", "MQTT host", mqttHost, MQTT_HOSTNAME_LEN + 1, config.mqttHost);
-    mqttPortParam = new ESPAsync_WMParameter("mqttServerPort", "MQTT port", mqttPort, 6, "config.mqttServerPort");
-    mqttUseTlsParam = new ESPAsync_WMParameter("mqttUseTls", "MQTT use TLS", mqttUseTls, 6, "config.mqttUseTls");
-    mqttInsecureParam = new ESPAsync_WMParameter("mqttInsecure", "MQTT Ignore certificate errors", mqttInsecure, 6, "config.mqttInsecure");
-    ssd1306RowsParam = new ESPAsync_WMParameter("ssd1306Rows", "SSD1306 rows", ssd1306Rows, 4, "config.ssd1306Rows");
-    scanIntervalParam = new ESPAsync_WMParameter("scanInterval", "Scan interval (sec)", scanInterval, 6, "config.scaninterval");
-
-    wifiManager->addParameter(deviceIdParam);
-    wifiManager->addParameter(mqttTopicParam);
-    wifiManager->addParameter(mqttUsernameParam);
-    wifiManager->addParameter(mqttPasswordParam);
-    wifiManager->addParameter(mqttHostParam);
-    wifiManager->addParameter(mqttPortParam);
-    wifiManager->addParameter(mqttUseTlsParam);
-    wifiManager->addParameter(mqttInsecureParam);
-    wifiManager->addParameter(ssd1306RowsParam);
-    wifiManager->addParameter(scanIntervalParam);
+    for (std::pair<ConfigParameterBase*, ESPAsync_WMParameter*>* configParameterPair : configParameterVector) {
+      wifiManager->addParameter(configParameterPair->second);
+    }
     wifiManager->setSaveConfigCallback(saveConfigCallback);
 
     ESP_LOGD(TAG, "SSID: %s", getSSID().c_str());
@@ -122,42 +83,23 @@ namespace WifiManager {
 
   void updateConfiguration(ESPAsync_WiFiManager* wifiManager) {
     if (safeConfigFlag) {
-      ESP_LOGD(TAG, "deviceId: %s", deviceIdParam->getValue());
-      ESP_LOGD(TAG, "mqttTopic: %s", mqttTopicParam->getValue());
-      ESP_LOGD(TAG, "mqttUsername: %s", mqttUsernameParam->getValue());
-      ESP_LOGD(TAG, "mqttPassword: %s", mqttPasswordParam->getValue());
-      ESP_LOGD(TAG, "mqttHost: %s", mqttHostParam->getValue());
-      ESP_LOGD(TAG, "mqttPort: %s", mqttPortParam->getValue());
-      ESP_LOGD(TAG, "mqttUseTls: %s", mqttUseTlsParam->getValue());
-      ESP_LOGD(TAG, "mqttInsecure: %s", mqttInsecureParam->getValue());
-      ESP_LOGD(TAG, "ssd1306Rows: %s", ssd1306RowsParam->getValue());
-      ESP_LOGD(TAG, "scanIntervalParam: %s", scanIntervalParam->getValue());
+      char msg[128];
+      for (std::pair<ConfigParameterBase*, ESPAsync_WMParameter*>* configParameterPair : configParameterVector) {
+        configParameterPair->first->print(msg);
+        ESP_LOGD(TAG, "%s: %s", configParameterPair->first->getId(), msg);
 
-      config.deviceId = (uint16_t)atoi(deviceIdParam->getValue());
-      strncpy(config.mqttTopic, mqttTopicParam->getValue(), MQTT_TOPIC_ID_LEN);
-      strncpy(config.mqttUsername, mqttUsernameParam->getValue(), MQTT_USERNAME_LEN);
-      strncpy(config.mqttPassword, mqttPasswordParam->getValue(), MQTT_PASSWORD_LEN);
-      strncpy(config.mqttHost, mqttHostParam->getValue(), MQTT_HOSTNAME_LEN);
-      config.mqttServerPort = (uint16_t)atoi(mqttPortParam->getValue());
-      config.mqttUseTls = strcmp("true", mqttUseTlsParam->getValue()) == 0;
-      config.mqttInsecure = strcmp("true", mqttInsecureParam->getValue()) == 0;
-      config.ssd1306Rows = (uint8_t)atoi(ssd1306RowsParam->getValue());
-      config.scanInterval = (uint16_t)atoi(scanIntervalParam->getValue());
-
+        configParameterPair->first->save(configParameterPair->second->getValue());
+      }
       saveConfiguration(config);
       delay(1000);
       esp_restart();
     }
-    delete deviceIdParam;
-    delete mqttTopicParam;
-    delete mqttUsernameParam;
-    delete mqttPasswordParam;
-    delete mqttHostParam;
-    delete mqttPortParam;
-    delete mqttUseTlsParam;
-    delete mqttInsecureParam;
-    delete ssd1306RowsParam;
-    delete scanIntervalParam;
+    for (std::pair<ConfigParameterBase*, ESPAsync_WMParameter*>* configParameterPair : configParameterVector) {
+      free(configParameterPair->first);
+      free(configParameterPair->second);
+      free(configParameterPair);
+    }
+    configParameterVector.clear();
   }
 
   void setupWifi(setPriorityMessageCallback_t setPriorityMessageCallback, clearPriorityMessageCallback_t clearPriorityMessageCallback) {
