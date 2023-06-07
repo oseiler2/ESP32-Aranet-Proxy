@@ -203,7 +203,7 @@ namespace mqtt {
     if (!mqtt_client->publish(topic, msg)) {
       ESP_LOGI(TAG, "publish status msg failed!");
       if (!keepOnFailure) free(statusMessage);
-      // don't free heap, since message will be re-tried      
+      // don't free heap, since message will be re-tried
       return false;
     }
     free(statusMessage);
