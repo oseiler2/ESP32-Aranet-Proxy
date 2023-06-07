@@ -38,8 +38,6 @@ namespace mqtt {
   uint32_t lastReconnectAttempt = 0;
   uint16_t connectionAttempts = 0;
 
-  DynamicJsonDocument doc(CONFIG_SIZE);
-
   readAranetFileCallback_t readAranetFileCallback;
   writeAranetFileCallback_t writeAranetFileCallback;
 
@@ -145,20 +143,18 @@ namespace mqtt {
   boolean publishConfigurationInternal() {
     char buf[256];
     char msg[CONFIG_SIZE];
-    doc.clear();
+    DynamicJsonDocument doc(CONFIG_SIZE);
     doc["appVersion"] = APP_VERSION;
-    doc["mqttHost"] = config.mqttHost;
-    doc["mqttServerPort"] = config.mqttServerPort;
-    doc["mqttUsername"] = config.mqttUsername;
-    doc["mqttTopic"] = config.mqttTopic;
-    doc["mqttUseTls"] = config.mqttUseTls;
-    doc["mqttInsecure"] = config.mqttInsecure;
     sprintf(buf, "%s", WifiManager::getMac().c_str());
     doc["mac"] = buf;
     sprintf(buf, "%s", WiFi.localIP().toString().c_str());
     doc["ip"] = buf;
-    doc["ssd1306Rows"] = config.ssd1306Rows;
-    doc["scanInterval"] = config.scanInterval;
+
+    for (ConfigParameterBase<Config>* configParameter : getConfigParameters()) {
+      if (!(strncmp(configParameter->getId(), "deviceId", strlen(buf)) == 0)
+        && !(strncmp(configParameter->getId(), "mqttPassword", strlen(buf)) == 0))
+        configParameter->toJson(config, &doc);
+    }
     if (serializeJson(doc, msg) == 0) {
       ESP_LOGW(TAG, "Failed to serialise payload");
       return true; // pretend to have been successful to prevent queue from clogging up
@@ -193,7 +189,7 @@ namespace mqtt {
     char topic[256];
     sprintf(topic, "%s/%u/up/status", config.mqttTopic, config.deviceId);
     char msg[256];
-    doc.clear();
+    DynamicJsonDocument doc(CONFIG_SIZE);
     doc["msg"] = statusMessage;
     if (serializeJson(doc, msg) == 0) {
       ESP_LOGW(TAG, "Failed to serialise payload");
@@ -268,26 +264,35 @@ namespace mqtt {
     if (strncmp(buf, "getConfig", strlen(buf)) == 0) {
       publishConfiguration();
     } else if (strncmp(buf, "setConfig", strlen(buf)) == 0) {
-      doc.clear();
+      DynamicJsonDocument doc(CONFIG_SIZE);
       DeserializationError error = deserializeJson(doc, msg);
       if (error) {
         ESP_LOGW(TAG, "Failed to parse message: %s", error.f_str());
         return;
       }
-      bool rebootRequired = false;
-      if (doc.containsKey("ssd1306Rows")) { config.ssd1306Rows = doc["ssd1306Rows"].as<uint8_t>(); rebootRequired = true; }
-      if (doc.containsKey("scanInterval")) { config.scanInterval = doc["scanInterval"].as<uint16_t>(); }
 
+      bool rebootRequired = false;
       Config mqttConfig = config;
       bool mqttConfigUpdated = false;
+      for (ConfigParameterBase<Config>* configParameter : getConfigParameters()) {
+        if (strncmp(configParameter->getId(), "mqttHost", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "mqttServerPort", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "deviceId", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "mqttUsername", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "mqttPassword", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "mqttTopic", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "mqttUseTls", strlen(buf)) == 0
+          || strncmp(configParameter->getId(), "mqttInsecure", strlen(buf)) == 0) {
+          mqttConfigUpdated |= configParameter->fromJson(mqttConfig, &doc, false);
+          if (configParameter->fromJson(mqttConfig, &doc, false))
+            ESP_LOGI(TAG, "MQTT Config %s updated to %s", configParameter->getId(), configParameter->toString(mqttConfig).c_str());
+        } else {
+          rebootRequired |= (configParameter->fromJson(config, &doc, false) && configParameter->isRebootRequiredOnChange());
+          if (configParameter->fromJson(config, &doc, false))
+            ESP_LOGI(TAG, "Config %s updated to %s. Reboot needed? %s", configParameter->getId(), configParameter->toString(config).c_str(), configParameter->isRebootRequiredOnChange() ? "true" : "false");
+        }
+      }
       bool mqttTestSuccess = true;
-      if (doc.containsKey("mqttHost")) { strlcpy(mqttConfig.mqttHost, doc["mqttHost"], sizeof(config.mqttHost)); mqttConfigUpdated = true; }
-      if (doc.containsKey("mqttServerPort")) { mqttConfig.mqttServerPort = doc["mqttServerPort"].as<uint16_t>(); mqttConfigUpdated = true; }
-      if (doc.containsKey("mqttUsername")) { strlcpy(mqttConfig.mqttUsername, doc["mqttUsername"], sizeof(config.mqttUsername)); mqttConfigUpdated = true; }
-      if (doc.containsKey("mqttPassword")) { strlcpy(mqttConfig.mqttPassword, doc["mqttPassword"], sizeof(config.mqttPassword)); mqttConfigUpdated = true; }
-      if (doc.containsKey("mqttTopic")) { strlcpy(mqttConfig.mqttTopic, doc["mqttTopic"], sizeof(config.mqttTopic)); mqttConfigUpdated = true; }
-      if (doc.containsKey("mqttUseTls")) { mqttConfig.mqttUseTls = doc["mqttUseTls"].as<boolean>(); mqttConfigUpdated = true; }
-      if (doc.containsKey("mqttInsecure")) { mqttConfig.mqttInsecure = doc["mqttInsecure"].as<boolean>(); mqttConfigUpdated = true; }
 
       if (mqttConfigUpdated) {
         WiFiClient* testWifiClient;
@@ -400,7 +405,7 @@ namespace mqtt {
       mqtt_client->subscribe(topic);
       sprintf(topic, "%s/%u/up/status", config.mqttTopic, config.deviceId);
       char msg[256];
-      doc.clear();
+      DynamicJsonDocument doc(CONFIG_SIZE);
       doc["online"] = true;
       doc["connectionAttempts"] = connectionAttempts;
       if (serializeJson(doc, msg) == 0) {
@@ -441,6 +446,8 @@ namespace mqtt {
     mqtt_client->setServer(config.mqttHost, config.mqttServerPort);
     mqtt_client->setCallback(callback);
     if (!mqtt_client->setBufferSize(MQTT_BUFFER_SIZE)) ESP_LOGE(TAG, "mqtt_client->setBufferSize failed!");
+
+    //    logging::addOnLogCallback(logCallback);
   }
 
   void mqttLoop(void* pvParameters) {
@@ -486,5 +493,4 @@ namespace mqtt {
     }
     vTaskDelete(NULL);
   }
-
 }

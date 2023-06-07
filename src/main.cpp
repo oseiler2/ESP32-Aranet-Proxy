@@ -1,3 +1,4 @@
+#include <logging.h>
 #include <globals.h>
 #include <Arduino.h>
 #include <config.h>
@@ -27,6 +28,7 @@ LCD* lcd;
 AranetScanner* aranetScanner;
 
 TaskHandle_t aranetScannerTask;
+TaskHandle_t wifiManagerTask;
 
 uint8_t timerMonitorIdx;
 Ticker* displayTicker = new Ticker();
@@ -36,9 +38,6 @@ volatile uint32_t lastBtnDebounceTime = 0;
 volatile uint8_t buttonState = 0;
 uint8_t oldConfirmedButtonState = 0;
 uint32_t lastConfirmedBtnPressedTime = 0;
-
-volatile uint8_t wifiDisconnected = 0;
-uint32_t lastWifiReconnectAttempt = 0;
 
 void ICACHE_RAM_ATTR buttonHandler() {
   buttonState = (digitalRead(BTN_1) ? 0 : 1);
@@ -99,44 +98,6 @@ void logCoreInfo() {
     ESP.getFlashChipSpeed());
 }
 
-void eventHandler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
-  if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-    ESP_LOGD(TAG, "eventHandler IP_EVENT IP_EVENT_STA_GOT_IP");
-    Timekeeper::initSntp();
-#ifdef SHOW_DEBUG_MSGS
-    if (lcd) lcd->updateMessage("IP_EVENT_STA_GOT_IP");
-#endif
-  } else if (event_base == WIFI_EVENT) {
-    switch (event_id) {
-      case WIFI_EVENT_STA_CONNECTED:
-        ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_CONNECTED");
-#ifdef SHOW_DEBUG_MSGS
-        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_CONNECTED");
-#endif
-        wifiDisconnected = 0;
-        if (LED_PIN >= 0) digitalWrite(LED_PIN, HIGH);
-        break;
-      case WIFI_EVENT_STA_DISCONNECTED:
-        ESP_LOGD(TAG, "eventHandler WIFI_EVENT WIFI_EVENT_STA_DISCONNECTED");
-#ifdef SHOW_DEBUG_MSGS        
-        if (lcd) lcd->updateMessage("WIFI_EVENT_STA_DISCONNECTED");
-#endif
-        wifiDisconnected = 1;
-        if (LED_PIN >= 0) digitalWrite(LED_PIN, LOW);
-        break;
-      default:
-#ifdef SHOW_DEBUG_MSGS
-        char msg[40];
-        sprintf(msg, "WIFI_EVENT %u", event_id);
-        if (lcd) lcd->updateMessage(msg);
-#endif
-        ESP_LOGD(TAG, "eventHandler WIFI_EVENT %u", event_id);
-        break;
-    }
-  } else {
-    ESP_LOGD(TAG, "eventHandler %s %u", event_base, event_id);
-  }
-}
 
 void displayTimer() {
   if (!aranetScanner) return;
@@ -188,6 +149,7 @@ void setup() {
   }
   pinMode(BTN_1, INPUT_PULLUP);
   Serial.begin(115200);
+  esp_log_set_vprintf(logging::logger);
   esp_log_level_set("*", ESP_LOG_VERBOSE);
   ESP_LOGI(TAG, "Aranet Proxy v%s. Built from %s @ %s", APP_VERSION, SRC_REVISION, BUILD_TIMESTAMP);
 
@@ -196,8 +158,8 @@ void setup() {
   RESET_REASON resetReason = rtc_get_reset_reason(0);
 
   ESP_ERROR_CHECK(esp_event_loop_create_default());
-  ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, eventHandler, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, eventHandler, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, WifiManager::eventHandler, NULL, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, WifiManager::eventHandler, NULL, NULL));
 
   setupConfigManager();
   if (!loadConfiguration(config)) {
@@ -208,15 +170,17 @@ void setup() {
 
   Timekeeper::init();
 
+  WifiManager::setupWifiManager("Aranet-proxy", getConfigParameters(), false, true,
+    updateMessage, setPriorityMessage, clearPriorityMessage);
+
+
+
   Wire.begin((int)SDA_PIN, (int)SCL_PIN, (uint32_t)I2C_CLK);
 
   I2C::initI2C();
 
   if (I2C::lcdPresent()) lcd = new LCD(&Wire);
 
-  // try to connect with known settings
-  WiFi.begin();
-  lastWifiReconnectAttempt = millis();
 
   mqtt::setupMqtt(readAranetDevices, writeAranetDevices);
   char msg[128];
@@ -239,6 +203,12 @@ void setup() {
     (void*)1,           // parameter of the task
     2,                  // priority of the task
     &OTA::otaTask,      // task handle
+    1);                 // CPU core
+
+  wifiManagerTask = WifiManager::start(
+    "wifiManagerLoop",  // name of task
+    8192,               // stack size of task
+    2,                  // priority of the task
     1);                 // CPU core
 
   aranetScannerTask = aranetScanner->start(
@@ -274,17 +244,10 @@ void loop() {
       if (btnPressTime < 2000) {
         if (LED_PIN >= 0) digitalWrite(LED_PIN, LOW);
         prepareOta();
-        WifiManager::startConfigPortal(updateMessage, setPriorityMessage, clearPriorityMessage);
+        WifiManager::startCaptivePortal();
       } else if (btnPressTime > 5000) {
       }
     }
   }
-
-  if (wifiDisconnected == 1 && !WiFi.isConnected()) {
-    if (millis() - lastWifiReconnectAttempt < 60000) return;
-    WiFi.begin();
-    lastWifiReconnectAttempt = millis();
-  }
-
   vTaskDelay(pdMS_TO_TICKS(50));
 }
