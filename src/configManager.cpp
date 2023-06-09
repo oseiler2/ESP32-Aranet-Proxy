@@ -29,7 +29,7 @@ Config config;
 */
 
 #define DEFAULT_DEVICE_ID                  0
-#define DEFAULT_MQTT_TOPIC      "co2monitor"
+#define DEFAULT_MQTT_TOPIC     "aranetproxy"
 #define DEFAULT_MQTT_HOST        "127.0.0.1"
 #define DEFAULT_MQTT_PORT               1883
 #define DEFAULT_MQTT_USERNAME   "aranetproxy"
