@@ -74,6 +74,8 @@ void publishMessage(char const* msg) {
   mqtt::publishStatusMsg(msg);
 }
 
+void configChanged() {}
+
 void logCoreInfo() {
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
@@ -171,9 +173,7 @@ void setup() {
   Timekeeper::init();
 
   WifiManager::setupWifiManager("Aranet-proxy", getConfigParameters(), false, true,
-    updateMessage, setPriorityMessage, clearPriorityMessage);
-
-
+    updateMessage, setPriorityMessage, clearPriorityMessage, configChanged);
 
   Wire.begin((int)SDA_PIN, (int)SCL_PIN, (uint32_t)I2C_CLK);
 
@@ -181,8 +181,8 @@ void setup() {
 
   if (I2C::lcdPresent()) lcd = new LCD(&Wire);
 
+  mqtt::setupMqtt(readAranetDevices, writeAranetDevices, configChanged);
 
-  mqtt::setupMqtt(readAranetDevices, writeAranetDevices);
   char msg[128];
   sprintf(msg, "Reset reason: %u", resetReason);
   mqtt::publishStatusMsg(msg);

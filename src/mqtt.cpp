@@ -3,7 +3,6 @@
 #include <config.h>
 
 #include <PubSubClient.h>
-#include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiClientSecure.h>
 #include <configManager.h>
@@ -35,11 +34,12 @@ namespace mqtt {
   WiFiClient* wifiClient;
   PubSubClient* mqtt_client;
 
-  uint32_t lastReconnectAttempt = 0;
-  uint16_t connectionAttempts = 0;
-
   readAranetFileCallback_t readAranetFileCallback;
   writeAranetFileCallback_t writeAranetFileCallback;
+  configChangedCallback_t configChangedCallback;
+
+  uint32_t lastReconnectAttempt = 0;
+  uint16_t connectionAttempts = 0;
 
   char* cloneStr(const char* original) {
     char* copy = (char*)malloc(strlen(original) + 1);
@@ -49,7 +49,10 @@ namespace mqtt {
   }
 
   void publishMeasurement(const char* name, DynamicJsonDocument* _payload) {
-    if (!WiFi.isConnected() || !mqtt_client->connected()) return;
+    if (!WiFi.isConnected() || !mqtt_client->connected()) {
+      delete _payload;
+      return;
+    }
     MqttMessage msg;
     msg.cmd = X_CMD_PUBLISH_SENSORS;
     msg.payload = _payload;
@@ -63,7 +66,6 @@ namespace mqtt {
   boolean publishMeasurementInternal(MqttMessage queueMsg, boolean keepOnFailure) {
     char topic[256];
     char msg[256];
-
     sprintf(topic, "%s/%u/up/sensors/%s", config.mqttTopic, config.deviceId, queueMsg.statusMessage);
     // Serialize JSON to file
     if (serializeJson(*queueMsg.payload, msg) == 0) {
@@ -317,6 +319,7 @@ namespace mqtt {
         delay(2000);
         esp_restart();
       }
+      configChangedCallback();
     } else if (strncmp(buf, "installMqttRootCa", strlen(buf)) == 0) {
       ESP_LOGD(TAG, "installMqttRootCa");
       if (!writeFile(TEMP_MQTT_ROOT_CA_FILENAME, (unsigned char*)&msg[0])) {
@@ -423,14 +426,16 @@ namespace mqtt {
     giveRadioMutex();
   }
 
-  void setupMqtt(readAranetFileCallback_t _readAranetFileCallback, writeAranetFileCallback_t _writeAranetFileCallback) {
-    readAranetFileCallback = _readAranetFileCallback;
-    writeAranetFileCallback = _writeAranetFileCallback;
+  void setupMqtt(readAranetFileCallback_t _readAranetFileCallback, writeAranetFileCallback_t _writeAranetFileCallback, configChangedCallback_t _configChangedCallback) {
 
     mqttQueue = xQueueCreate(MQTT_QUEUE_LENGTH, sizeof(struct MqttMessage));
     if (mqttQueue == NULL) {
       ESP_LOGE(TAG, "Queue creation failed!");
     }
+
+    readAranetFileCallback = _readAranetFileCallback;
+    writeAranetFileCallback = _writeAranetFileCallback;
+    configChangedCallback = _configChangedCallback;
 
     if (config.mqttUseTls) {
       wifiClient = new WiFiClientSecure();
