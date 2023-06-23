@@ -181,7 +181,7 @@ void setup() {
 
   if (I2C::lcdPresent()) lcd = new LCD(&Wire);
 
-  mqtt::setupMqtt(readAranetDevices, writeAranetDevices, configChanged);
+  mqtt::setupMqtt("AranetProxy", readAranetDevices, writeAranetDevices, configChanged);
 
   char msg[128];
   sprintf(msg, "Reset reason: %u", resetReason);

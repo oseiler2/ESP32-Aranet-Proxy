@@ -34,6 +34,8 @@ namespace mqtt {
   WiFiClient* wifiClient;
   PubSubClient* mqtt_client;
 
+  const char* appName;
+
   readAranetFileCallback_t readAranetFileCallback;
   writeAranetFileCallback_t writeAranetFileCallback;
   configChangedCallback_t configChangedCallback;
@@ -128,7 +130,7 @@ namespace mqtt {
     boolean mqttTestSuccess;
     PubSubClient* testMqttClient = new PubSubClient(*wifiClient);
     testMqttClient->setServer(testConfig.mqttHost, testConfig.mqttServerPort);
-    sprintf(buf, "Aranet-proxy-%u-%s", testConfig.deviceId, WifiManager::getMac().c_str());
+    sprintf(buf, "%s-%u-%s", appName, testConfig.deviceId, WifiManager::getMac().c_str());
     // disconnect current connection if not enough heap avalable to initiate another tls session.
     if (testConfig.mqttUseTls && ESP.getFreeHeap() < 75000) mqtt_client->disconnect();
     mqttTestSuccess = testMqttClient->connect(buf, testConfig.mqttUsername, testConfig.mqttPassword);
@@ -388,14 +390,16 @@ namespace mqtt {
 
   void reconnect() {
     if (!WiFi.isConnected() || mqtt_client->connected()) return;
-    if (millis() - lastReconnectAttempt < 5000) return;
+    if (millis() - lastReconnectAttempt < 60000) return;
+    if (strncmp(config.mqttHost, "127.0.0.1", MQTT_HOSTNAME_LEN) == 0 ||
+      strncmp(config.mqttHost, "localhost", MQTT_HOSTNAME_LEN) == 0) return;
     if (!takeRadioMutex(MQTT_MUTEX_DEF_WAIT)) {
       ESP_LOGI(TAG, "Failed taking mutex - skipping mqtt connect");
       return;
     }
     char topic[256];
     char id[64];
-    sprintf(id, "Aranet-proxy-%u-%s", config.deviceId, WifiManager::getMac().c_str());
+    sprintf(id, "%s-%u-%s", appName, config.deviceId, WifiManager::getMac().c_str());
     lastReconnectAttempt = millis();
     ESP_LOGD(TAG, "Attempting MQTT connection...");
     connectionAttempts++;
@@ -426,8 +430,13 @@ namespace mqtt {
     giveRadioMutex();
   }
 
-  void setupMqtt(readAranetFileCallback_t _readAranetFileCallback, writeAranetFileCallback_t _writeAranetFileCallback, configChangedCallback_t _configChangedCallback) {
+  void setupMqtt(
+    const char* _appName,
+    readAranetFileCallback_t _readAranetFileCallback,
+    writeAranetFileCallback_t _writeAranetFileCallback,
+    configChangedCallback_t _configChangedCallback) {
 
+    appName = _appName;
     mqttQueue = xQueueCreate(MQTT_QUEUE_LENGTH, sizeof(struct MqttMessage));
     if (mqttQueue == NULL) {
       ESP_LOGE(TAG, "Queue creation failed!");

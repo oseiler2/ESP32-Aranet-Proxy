@@ -21,7 +21,7 @@ namespace mqtt {
   typedef const char* (*readAranetFileCallback_t)(void);
   typedef boolean(*writeAranetFileCallback_t)(unsigned char*);
 
-  void setupMqtt(readAranetFileCallback_t readAranetFileCallback, writeAranetFileCallback_t writeAranetFileCallback, configChangedCallback_t configChangedCallback);
+  void setupMqtt(const char* _appName, readAranetFileCallback_t readAranetFileCallback, writeAranetFileCallback_t writeAranetFileCallback, configChangedCallback_t configChangedCallback);
 
   void publishMeasurement(const char* name, DynamicJsonDocument* payload);
   void publishConfiguration();
