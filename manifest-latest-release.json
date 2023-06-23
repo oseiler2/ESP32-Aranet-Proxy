@@ -1,0 +1,15 @@
+{
+  "name": "ESP32-Aranet-Proxy latest release",
+  "version": "",
+  "new_install_prompt_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [{ "path": "build/firmware-combined-esp32.bin", "offset": 0 }]
+    },
+    {
+      "chipFamily": "ESP32-S3",
+      "parts": [{ "path": "build/firmware-combined-esp32-s3.bin", "offset": 0 }]
+    }
+  ]
+}
