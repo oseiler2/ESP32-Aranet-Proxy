@@ -112,7 +112,7 @@ boolean AranetScanner::loadAranetDevices() {
   }
 
   for (AranetMonitor* aranetMonitor : aranetMonitorVector) {
-    free(aranetMonitor);
+    delete(aranetMonitor);
   }
   this->aranetMonitorVector.clear();
 
@@ -235,7 +235,9 @@ AranetScanner::AranetScanner(updateMessageCallback_t _updateMessageCallback, pub
   this->loadAranetDevices();
 }
 
-AranetScanner::~AranetScanner() {}
+AranetScanner::~AranetScanner() {
+  delete(this->aranet);
+}
 
 void AranetScanner::pause(boolean pauseResume) {
   this->paused = pauseResume;
