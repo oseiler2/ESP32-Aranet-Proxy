@@ -199,7 +199,7 @@ void setup() {
 
   xTaskCreatePinnedToCore(OTA::otaLoop,  // task function
     "otaLoop",          // name of task
-    8192,               // stack size of task
+    4096,               // stack size of task
     (void*)1,           // parameter of the task
     2,                  // priority of the task
     &OTA::otaTask,      // task handle
@@ -207,13 +207,13 @@ void setup() {
 
   wifiManagerTask = WifiManager::start(
     "wifiManagerLoop",  // name of task
-    8192,               // stack size of task
+    4096,               // stack size of task
     2,                  // priority of the task
     1);                 // CPU core
 
   aranetScannerTask = aranetScanner->start(
     "aranetScannerLoop",
-    8192,
+    4096,
     3,
     1);
 
