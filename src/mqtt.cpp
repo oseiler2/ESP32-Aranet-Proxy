@@ -401,6 +401,7 @@ namespace mqtt {
     char id[64];
     sprintf(id, "%s-%u-%s", appName, config.deviceId, WifiManager::getMac().c_str());
     lastReconnectAttempt = millis();
+    if (config.mqttUseTls && ESP.getFreeHeap() < 75000) ESP_LOGW(TAG, "Low memory! %u", ESP.getFreeHeap());
     ESP_LOGD(TAG, "Attempting MQTT connection...");
     connectionAttempts++;
     sprintf(topic, "%s/%u/up/status", config.mqttTopic, config.deviceId);
