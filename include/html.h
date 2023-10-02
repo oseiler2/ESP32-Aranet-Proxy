@@ -375,6 +375,7 @@ td {text-align: left;}
           <button class='btn' type='submit'>Save</button><br>
         </form>
         <form action='/' method='get'><button class='btn'>Cancel</button></form>
+        <form action='wifireset' method='get'><button class='btn'>Reset Wifi config</button></form>
  )";
 
 
