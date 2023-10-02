@@ -63,6 +63,7 @@ namespace WifiManager {
   void handleSafeConfig(AsyncWebServerRequest* request);
   void handleWifi(AsyncWebServerRequest* request);
   void handleSafeWifi(AsyncWebServerRequest* request);
+  void handleResetWifi(AsyncWebServerRequest* request);
   void handleScan(AsyncWebServerRequest* request);
   void handleReboot(AsyncWebServerRequest* request);
   void handleNotFound(AsyncWebServerRequest* request);
@@ -193,6 +194,7 @@ namespace WifiManager {
     server.on("/configsave", HTTP_GET, handleSafeConfig);
     server.on("/wifi", HTTP_GET, handleWifi);
     server.on("/wifisave", HTTP_GET, handleSafeWifi);
+    server.on("/wifireset", HTTP_GET, handleResetWifi);
     server.on("/scan", HTTP_GET, handleScan);
     server.on("/reboot", HTTP_GET, handleReboot);
     server.onNotFound(handleNotFound);
@@ -373,6 +375,16 @@ namespace WifiManager {
 
     if (wifiManagerTask)
       xTaskNotify(wifiManagerTask, X_CMD_CONNECT, eSetBits);
+  }
+
+  void handleResetWifi(AsyncWebServerRequest* request) {
+    ESP_LOGD(TAG, "Save Wifi: %s", request->arg("s").c_str());
+    if (!authenticate(request)) return;
+    resetSettings();
+    AsyncWebServerResponse* response = request->beginResponse(302, html::content_type_plain, "");
+    response->addHeader("Location", "/");
+    response->addHeader(FPSTR(html::header_cache_control), FPSTR(html::cache_control_no_cache));
+    request->send(response);
   }
 
   void addStatus(String& page) {
@@ -708,7 +720,7 @@ namespace WifiManager {
         wifi_event_sta_disconnected_t* event = (wifi_event_sta_disconnected_t*)event_data;
         ESP_LOGD(TAG, "STA Disconnected: ssid: %s, reason: %s", event->ssid, reason2str(event->reason));
 
-        if (event->reason == 15) {
+        if (event->reason == 15) { // 4WAY_HANDSHAKE_TIMEOUT
           WiFi.setAutoReconnect(false);
         }
 
