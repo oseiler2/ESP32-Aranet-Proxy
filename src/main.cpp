@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <config.h>
 
-#include <WiFi.h>
 #include <i2c.h>
 #include <esp_event.h>
 #include <esp_err.h>
@@ -15,6 +14,11 @@
 #include <aranet-scanner.h>
 #include <housekeeping.h>
 #include <lcd.h>
+
+#ifdef ST7789_DRIVER
+#include <tft.h>
+#endif
+
 #include <FS.h>
 #include <LittleFS.h>
 #include <wifiManager.h>
@@ -25,6 +29,10 @@
 static const char TAG[] = __FILE__;
 
 LCD* lcd;
+#ifdef ST7789_DRIVER
+TFT* tft;
+SPIClass spi = SPIClass(FSPI);
+#endif
 AranetScanner* aranetScanner;
 
 TaskHandle_t aranetScannerTask;
@@ -52,18 +60,27 @@ void updateMessage(char const* msg) {
   if (lcd) {
     lcd->updateMessage(msg);
   }
+#ifdef ST7789_DRIVER
+  tft->updateMessage(msg);
+#endif
 }
 
 void setPriorityMessage(char const* msg) {
   if (lcd) {
     lcd->setPriorityMessage(msg);
   }
+#ifdef ST7789_DRIVER
+  tft->setPriorityMessage(msg);
+#endif
 }
 
 void clearPriorityMessage() {
   if (lcd) {
     lcd->clearPriorityMessage();
   }
+#ifdef ST7789_DRIVER
+  tft->clearPriorityMessage();
+#endif
 }
 
 void publishMeasurement(const char* name, DynamicJsonDocument* payload) {
@@ -114,6 +131,9 @@ void displayTimer() {
   if (lcd) {
     lcd->update(mon);
   }
+#ifdef ST7789_DRIVER
+  tft->update(mon);
+#endif
 }
 
 static SemaphoreHandle_t radioMutex = xSemaphoreCreateMutex();
@@ -175,11 +195,16 @@ void setup() {
   WifiManager::setupWifiManager("Aranet-proxy", getConfigParameters(), false, true,
     updateMessage, setPriorityMessage, clearPriorityMessage, configChanged);
 
+#ifndef ST7789_DRIVER
   Wire.begin((int)SDA_PIN, (int)SCL_PIN, (uint32_t)I2C_CLK);
 
   I2C::initI2C();
+#endif
 
   if (I2C::lcdPresent()) lcd = new LCD(&Wire);
+#ifdef ST7789_DRIVER
+  tft = new TFT(&spi);
+#endif
 
   mqtt::setupMqtt("AranetProxy", readAranetDevices, writeAranetDevices, configChanged);
 
@@ -230,6 +255,10 @@ void setup() {
   if (lcd) {
     lcd->updateMessage("Setup done.");
   }
+#ifdef ST7789_DRIVER
+  tft->updateMessage("Setup done.");
+#endif
+
 #endif
 }
 
