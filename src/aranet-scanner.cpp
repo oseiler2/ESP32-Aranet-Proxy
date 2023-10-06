@@ -14,7 +14,7 @@ static const char TAG[] = __FILE__;
 
 #define ARANET_DEVICES_SIZE 1024
 
-#define FILE_MUTEX_DEF_WAIT pdMS_TO_TICKS(1000)
+#define FILE_MUTEX_DEF_WAIT pdMS_TO_TICKS(300)
 
 SemaphoreHandle_t AranetScanner::fileMutex = xSemaphoreCreateMutex();
 
