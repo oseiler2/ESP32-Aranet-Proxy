@@ -31,7 +31,7 @@ static const char TAG[] = __FILE__;
 LCD* lcd;
 #ifdef ST7789_DRIVER
 TFT* tft;
-SPIClass spi = SPIClass(FSPI);
+SPIClass spi = SPIClass(VSPI);
 #endif
 AranetScanner* aranetScanner;
 

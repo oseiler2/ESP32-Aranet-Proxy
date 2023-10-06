@@ -3,6 +3,8 @@
 #include <tft.h>
 #include <configManager.h>
 
+#ifdef ST7789_DRIVER
+
 #include <Adafruit_GFX.h>
 
 #include <Fonts/FreeMono18pt7b.h>
@@ -122,3 +124,5 @@ void TFT::update(AranetMonitor* monitor) {
 
 }
 
+
+#endif

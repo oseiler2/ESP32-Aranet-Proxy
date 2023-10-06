@@ -1,6 +1,7 @@
 #ifndef _TFT_H
 #define _TFT_H
 
+#ifdef ST7789_DRIVER
 #include <globals.h>
 #include <SPI.h>
 
@@ -34,4 +35,5 @@ private:
 };
 
 
+#endif
 #endif
