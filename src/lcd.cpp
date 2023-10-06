@@ -119,7 +119,7 @@ void LCD::update(AranetMonitor* monitor) {
   this->display->writeFillRect(0, temp_hum_y, 128, temp_hum_height, BLACK);
   this->display->setFont(NULL);
   this->display->setCursor(0, temp_hum_y);
-  this->display->printf("temp: %3.1f  hum: %u%%", monitor->lastData.temperature / 20.0, monitor->lastData.humidity);
+  this->display->printf("temp: %4.1f  hum: %u%%", monitor->lastData.temperature / 20.0, monitor->lastData.humidity);
 
   this->display->display();
   I2C::giveMutex();
