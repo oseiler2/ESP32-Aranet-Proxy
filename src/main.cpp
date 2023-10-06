@@ -216,7 +216,7 @@ void setup() {
 
   xTaskCreatePinnedToCore(mqtt::mqttLoop,  // task function
     "mqttLoop",         // name of task
-    8192,               // stack size of task
+    6144,               // stack size of task
     (void*)1,           // parameter of the task
     2,                  // priority of the task
     &mqtt::mqttTask,    // task handle
@@ -232,7 +232,7 @@ void setup() {
 
   wifiManagerTask = WifiManager::start(
     "wifiManagerLoop",  // name of task
-    4096,               // stack size of task
+    3072,               // stack size of task
     2,                  // priority of the task
     1);                 // CPU core
 

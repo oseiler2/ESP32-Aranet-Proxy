@@ -179,6 +179,8 @@ namespace WifiManager {
     ESP_LOGD(TAG, "Turning on Wifi, ssid: %s", getStoredWiFiSsid());
     lastWifiReconnectAttempt = millis();
     WiFi.begin();
+    esp_err_t res = esp_wifi_set_inactive_time(WIFI_IF_STA, 120);
+    if (res != ESP_OK) ESP_LOGD(TAG, "esp_wifi_set_inactive_time returned %u", res);
 
     if (keepCaptivePortalActive) startCaptivePortal();
 
